@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -99,7 +99,7 @@ export default function Home() {
                 className="btn btn-login"
                 style={{ cursor: 'pointer' }}
               >
-                VIEW ANALYTICS
+                VIEW DASHBOARD
               </button>
             </div>
           </div>
@@ -269,98 +269,50 @@ export default function Home() {
           </div>
 
           <div className="modules-grid">
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/simulation')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Argument Mining"
-            >
-              <div className="module-num">01/08</div>
-              <h3 className="module-title">ARGUMENT MINING</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>ARGUMENT MINING</h3>
               <p className="module-desc">Automatic extraction of claims and evidence from live speech or text streams.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/simulation')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Logic Audit"
-            >
-              <div className="module-num">02/08</div>
-              <h3 className="module-title">LOGIC AUDIT</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>LOGIC AUDIT</h3>
               <p className="module-desc">Detects ad hominem, straw man, and 24+ other logical fallacies instantly.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/simulation')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Rebuttal Generator"
-            >
-              <div className="module-num">03/08</div>
-              <h3 className="module-title">REBUTTAL GEN</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>REBUTTAL GEN</h3>
               <p className="module-desc">Generates evidence-backed counterpoints using diverse agentic personas.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/presentation')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Vocal Metrics"
-            >
-              <div className="module-num">04/08</div>
-              <h3 className="module-title">VOCAL METRICS</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>VOCAL METRICS</h3>
               <p className="module-desc">Analyzes cadence, filler words, and confidence levels through prosody analysis.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/simulation')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Simulation Engine"
-            >
-              <div className="module-num">05/08</div>
-              <h3 className="module-title">SIMULATION ENGINE</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>SIMULATION ENGINE</h3>
               <p className="module-desc">Engage with LLM-driven opponents across five debate formats.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/dashboard')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Scoring Model"
-            >
-              <div className="module-num">06/08</div>
-              <h3 className="module-title">SCORING MODEL</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>SCORING MODEL</h3>
               <p className="module-desc">Weighted assessment of argument quality, logic, and delivery.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/dashboard')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Coaching Engine"
-            >
-              <div className="module-num">07/08</div>
-              <h3 className="module-title">COACHING ENGINE</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>COACHING ENGINE</h3>
               <p className="module-desc">Personalized feedback, improvement plans, and skill gap analysis.</p>
               <div className="module-line"></div>
             </div>
 
-            <div 
-              className="module-card" 
-              onClick={(e) => handleFeatureClick(e, '/reports')}
-              style={{ cursor: 'pointer' }}
-              title="Click to access Analytics Reports"
-            >
-              <div className="module-num">08/08</div>
-              <h3 className="module-title">ANALYTICS SUITE</h3>
+            <div className="module-card" style={{ cursor: 'default' }}>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>DASHBOARD SUITE</h3>
               <p className="module-desc">Learner, coach, educator, and admin dashboards with progress tracking.</p>
               <div className="module-line"></div>
             </div>
@@ -398,17 +350,17 @@ export default function Home() {
           </h2>
 
           <div className="persona-grid" style={{ textAlign: 'left' }}>
-            <div className="persona-card" onClick={(e) => handleFeatureClick(e, '/simulation')} style={{ cursor: 'pointer' }}>
+            <div className="persona-card" style={{ cursor: 'default' }}>
               <h3 className="persona-card-title">LEARNER</h3>
               <p className="persona-card-desc">Master critical thinking via real-time feedback.</p>
             </div>
 
-            <div className="persona-card" onClick={(e) => handleFeatureClick(e, '/dashboard')} style={{ cursor: 'pointer' }}>
+            <div className="persona-card" style={{ cursor: 'default' }}>
               <h3 className="persona-card-title">COACH</h3>
               <p className="persona-card-desc">Mentor students with structured analytics.</p>
             </div>
 
-            <div className="persona-card" onClick={(e) => handleFeatureClick(e, '/dashboard')} style={{ cursor: 'pointer' }}>
+            <div className="persona-card" style={{ cursor: 'default' }}>
               <h3 className="persona-card-title">EDUCATOR</h3>
               <p className="persona-card-desc">Monitor student progress and gaps.</p>
             </div>

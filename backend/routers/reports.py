@@ -744,42 +744,23 @@ def export_coaching_pdf_report(
 
 @router.get("/export/coach/roster/pdf")
 def export_coach_roster_pdf(
+    student_id: Optional[str] = None,
     token: Optional[str] = None,
     auth_user: Optional[models.User] = Depends(get_authenticated_user),
     db: Session = Depends(get_db)
 ):
-    """Generates an executive Classroom & Student Roster Audit PDF for Coaches and Educators."""
+    """Generates an executive Classroom Cohort Audit PDF or a specific Student Evaluation Report."""
     coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
-    
-    students = db.query(models.User).filter(
-        models.User.id != coach.id,
-        models.User.role != "Debate Coach",
-        models.User.role != "Administrator"
-    ).order_by(models.User.id.desc()).all()
-    if not students:
-        students = db.query(models.User).filter(models.User.id != coach.id).order_by(models.User.id.desc()).all()
+    st = get_custom_pdf_styles()
 
-    roster_rows = []
-    for u in students:
-        latest_session = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).order_by(models.DebateSession.id.desc()).first()
-        total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).count()
-        scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == u.id).all()
-        avg_score = round(sum(s[0] for s in scores) / len(scores), 1) if scores else (85.0 if total_sessions > 0 else 0.0)
-        
-        grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C" if avg_score > 0 else "Pending"
-        
-        roster_rows.append({
-            "name": u.full_name or u.email.split("@")[0],
-            "email": u.email,
-            "topic": latest_session.topic if latest_session else "No practice recorded yet",
-            "sessions": total_sessions,
-            "grade": grade,
-            "score": avg_score
-        })
+    # If a specific student was targeted:
+    target_student = None
+    if student_id and student_id not in ["all", "cohort", "0", ""]:
+        try:
+            target_student = db.query(models.User).filter(models.User.id == int(student_id)).first()
+        except Exception:
+            target_student = None
 
-    class_avg = round(sum(r["score"] for r in roster_rows if r["score"] > 0) / max(1, len([r for r in roster_rows if r["score"] > 0])), 1)
-
-    # Build PDF
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,
@@ -789,48 +770,177 @@ def export_coach_roster_pdf(
         topMargin=36,
         bottomMargin=36
     )
-    
-    st = get_custom_pdf_styles()
     elements = []
 
-    # Header
-    elements.append(Paragraph("LOGOS.AI // COACH & EDUCATOR EXECUTIVE ROSTER AUDIT", st['badge']))
-    elements.append(Spacer(1, 4))
-    elements.append(Paragraph("CLASSROOM STUDENT ROSTER & PERFORMANCE AUDIT", st['title']))
-    elements.append(Spacer(1, 4))
-    elements.append(Paragraph(f"Instructor: {coach.full_name} ({coach.email}) • Enrolled Students: {len(roster_rows)} • Class Average: {class_avg}%", st['body']))
-    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
-
-    # Roster Table
-    r_data = [
-        [
-            Paragraph("<b>Student Name & Email</b>", st['meta_label']),
-            Paragraph("<b>Active Practice Topic</b>", st['meta_label']),
-            Paragraph("<b>Sessions</b>", st['meta_label']),
-            Paragraph("<b>Grade</b>", st['meta_label']),
-            Paragraph("<b>Avg Score</b>", st['meta_label'])
-        ]
-    ]
-    for r in roster_rows:
-        r_data.append([
-            Paragraph(f"<b>{r['name']}</b><br/><font color='#6B7280' size='7'>{r['email']}</font>", st['body']),
-            Paragraph(r['topic'][:60], st['body']),
-            Paragraph(str(r['sessions']), st['body']),
-            Paragraph(f"<b>{r['grade']}</b>", st['body']),
-            Paragraph(f"<b>{r['score']}%</b>" if r['score'] > 0 else "N/A", st['body'])
-        ])
+    if target_student:
+        # Generate Coach Assessment for single student
+        latest_session = db.query(models.DebateSession).filter(models.DebateSession.user_id == target_student.id).order_by(models.DebateSession.id.desc()).first()
+        total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == target_student.id).count()
+        scores = db.query(models.PerformanceScore).filter(models.PerformanceScore.user_id == target_student.id).all()
+        p_metrics = db.query(models.PresentationMetric).filter(models.PresentationMetric.user_id == target_student.id).all()
         
-    r_table = Table(r_data, colWidths=[150, 220, 55, 55, 60])
-    r_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E7EB')),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9FAFB')]),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-    ]))
-    elements.append(r_table)
+        avg_score = round(sum(s.overall_weighted_score for s in scores) / len(scores), 1) if scores else (85.0 if total_sessions > 0 else 0.0)
+        avg_logic = round(sum(s.logical_consistency for s in scores) / len(scores), 1) if scores else 85.0
+        avg_rebut = round(sum(s.rebuttal_effectiveness for s in scores) / len(scores), 1) if scores else 84.0
+        avg_wpm = round(sum(m.speech_pace_wpm for m in p_metrics) / len(p_metrics), 1) if p_metrics else 142.0
+        
+        feedbacks = db.query(models.Notification).filter(
+            models.Notification.user_id == target_student.id,
+            models.Notification.category == "Coach Feedback"
+        ).order_by(models.Notification.id.desc()).all()
+
+        grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C" if avg_score > 0 else "Pending"
+
+        elements.append(Paragraph("LOGOS.AI // INSTRUCTOR EVALUATOR ASSESSMENT REPORT", st['badge']))
+        elements.append(Spacer(1, 4))
+        elements.append(Paragraph("STUDENT DEBATE & SPEECH EVALUATION", st['title']))
+        elements.append(Spacer(1, 4))
+        elements.append(Paragraph(f"Evaluator: {coach.full_name} ({coach.email}) • Debater: {target_student.full_name} ({target_student.email})", st['body']))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
+
+        meta_data = [
+            [
+                Paragraph("<b>Student Name:</b>", st['meta_label']),
+                Paragraph(target_student.full_name or "Student", st['meta_val']),
+                Paragraph("<b>Assigned Grade:</b>", st['meta_label']),
+                Paragraph(f"<b><font color='#D90429'>{grade}</font></b>", st['meta_val'])
+            ],
+            [
+                Paragraph("<b>Experience Level:</b>", st['meta_label']),
+                Paragraph(target_student.experience_level or "Intermediate", st['meta_val']),
+                Paragraph("<b>Total Sessions:</b>", st['meta_label']),
+                Paragraph(f"{total_sessions} Sessions", st['meta_val'])
+            ],
+            [
+                Paragraph("<b>Active Practice Topic:</b>", st['meta_label']),
+                Paragraph(latest_session.topic if latest_session else "N/A", st['meta_val']),
+                Paragraph("<b>Overall Average:</b>", st['meta_label']),
+                Paragraph(f"<b>{avg_score}%</b>" if avg_score > 0 else "Pending", st['meta_val'])
+            ]
+        ]
+        meta_table = Table(meta_data, colWidths=[120, 200, 110, 110])
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F9FAFB')),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E7EB')),
+            ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#F3F4F6')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        elements.append(meta_table)
+        elements.append(Spacer(1, 14))
+
+        elements.append(Paragraph("1. CORE COMPETENCY BENCHMARKS", st['h2']))
+        score_data = [
+            [
+                Paragraph("<b>Metric Dimension</b>", st['meta_label']),
+                Paragraph("<b>Score</b>", st['meta_label']),
+                Paragraph("<b>Coach Assessment Assessment</b>", st['meta_label'])
+            ],
+            [
+                Paragraph("Logical Consistency", st['body']),
+                Paragraph(f"<b>{avg_logic}%</b>", st['body']),
+                Paragraph("Syllogistic structure and fallacy defense reviewed.", st['body'])
+            ],
+            [
+                Paragraph("Rebuttal Effectiveness", st['body']),
+                Paragraph(f"<b>{avg_rebut}%</b>", st['body']),
+                Paragraph("Responsiveness to opponent counter-claims.", st['body'])
+            ],
+            [
+                Paragraph("Vocal Cadence & Pacing", st['body']),
+                Paragraph(f"<b>{avg_wpm} WPM</b>", st['body']),
+                Paragraph("Target range 130-150 WPM for maximum persuasive rhythm.", st['body'])
+            ]
+        ]
+        score_table = Table(score_data, colWidths=[160, 80, 300])
+        score_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E7EB')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ]))
+        elements.append(score_table)
+        elements.append(Spacer(1, 14))
+
+        if feedbacks:
+            elements.append(Paragraph("2. INSTRUCTOR DIRECTIVES & FEEDBACK LOG", st['h2']))
+            for fb in feedbacks:
+                elements.append(Paragraph(f"• <b>{fb.title} ({fb.created_at.strftime('%b %d, %Y')}):</b> {fb.message}", st['body']))
+                elements.append(Spacer(1, 4))
+        else:
+            elements.append(Paragraph("2. INSTRUCTOR DIRECTIVES", st['h2']))
+            elements.append(Paragraph("Student is currently meeting standard progression benchmarks. Encourage further practice in multi-turn Parliamentary rounds.", st['body']))
+
+        filename = f"LogosAI_Coach_Assessment_{target_student.id}.pdf"
+    else:
+        # Cohort Roster Table
+        students = db.query(models.User).filter(
+            models.User.id != coach.id,
+            models.User.role != "Debate Coach",
+            models.User.role != "Administrator"
+        ).order_by(models.User.id.desc()).all()
+        if not students:
+            students = db.query(models.User).filter(models.User.id != coach.id).order_by(models.User.id.desc()).all()
+
+        roster_rows = []
+        for u in students:
+            latest_session = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).order_by(models.DebateSession.id.desc()).first()
+            total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).count()
+            scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == u.id).all()
+            avg_score = round(sum(s[0] for s in scores) / len(scores), 1) if scores else (85.0 if total_sessions > 0 else 0.0)
+            
+            grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C" if avg_score > 0 else "Pending"
+            
+            roster_rows.append({
+                "name": u.full_name or u.email.split("@")[0],
+                "email": u.email,
+                "topic": latest_session.topic if latest_session else "No practice recorded yet",
+                "sessions": total_sessions,
+                "grade": grade,
+                "score": avg_score
+            })
+
+        class_avg = round(sum(r["score"] for r in roster_rows if r["score"] > 0) / max(1, len([r for r in roster_rows if r["score"] > 0])), 1)
+
+        elements.append(Paragraph("LOGOS.AI // COACH & EDUCATOR EXECUTIVE ROSTER AUDIT", st['badge']))
+        elements.append(Spacer(1, 4))
+        elements.append(Paragraph("CLASSROOM STUDENT ROSTER & PERFORMANCE AUDIT", st['title']))
+        elements.append(Spacer(1, 4))
+        elements.append(Paragraph(f"Instructor: {coach.full_name} ({coach.email}) • Enrolled Students: {len(roster_rows)} • Class Average: {class_avg}%", st['body']))
+        elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
+
+        r_data = [
+            [
+                Paragraph("<b>Student Name & Email</b>", st['meta_label']),
+                Paragraph("<b>Active Practice Topic</b>", st['meta_label']),
+                Paragraph("<b>Sessions</b>", st['meta_label']),
+                Paragraph("<b>Grade</b>", st['meta_label']),
+                Paragraph("<b>Avg Score</b>", st['meta_label'])
+            ]
+        ]
+        for r in roster_rows:
+            r_data.append([
+                Paragraph(f"<b>{r['name']}</b><br/><font color='#6B7280' size='7'>{r['email']}</font>", st['body']),
+                Paragraph(r['topic'][:60], st['body']),
+                Paragraph(str(r['sessions']), st['body']),
+                Paragraph(f"<b>{r['grade']}</b>", st['body']),
+                Paragraph(f"<b>{r['score']}%</b>" if r['score'] > 0 else "N/A", st['body'])
+            ])
+            
+        r_table = Table(r_data, colWidths=[150, 220, 55, 55, 60])
+        r_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E7EB')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9FAFB')]),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ]))
+        elements.append(r_table)
+        filename = "LogosAI_Student_Roster_Audit.pdf"
 
     elements.append(Spacer(1, 15))
     cert_text = f"GENERATED BY LOGOS.AI COACHING PORTAL • ROSTER AUDIT ID: ROSTER-LOGOS-{datetime.utcnow().strftime('%Y%m%d')} • ALL RIGHTS RESERVED."
@@ -844,7 +954,7 @@ def export_coach_roster_pdf(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": "attachment; filename=LogosAI_Student_Roster_Audit.pdf",
+            "Content-Disposition": f"attachment; filename={filename}",
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )
@@ -852,41 +962,91 @@ def export_coach_roster_pdf(
 
 @router.get("/export/coach/roster/excel")
 def export_coach_roster_excel(
+    student_id: Optional[str] = None,
     token: Optional[str] = None,
     auth_user: Optional[models.User] = Depends(get_authenticated_user),
     db: Session = Depends(get_db)
 ):
-    """Generates an authentic CSV / Excel data export of the student roster for Coaches and Educators."""
+    """Generates an authentic CSV / Excel data export of the student roster or a specific student's metrics."""
     coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
     
-    students = db.query(models.User).filter(
-        models.User.id != coach.id,
-        models.User.role != "Debate Coach",
-        models.User.role != "Administrator"
-    ).order_by(models.User.id.desc()).all()
-    if not students:
-        students = db.query(models.User).filter(models.User.id != coach.id).order_by(models.User.id.desc()).all()
+    # If a specific student was targeted:
+    target_student = None
+    if student_id and student_id not in ["all", "cohort", "0", ""]:
+        try:
+            target_student = db.query(models.User).filter(models.User.id == int(student_id)).first()
+        except Exception:
+            target_student = None
 
-    csv_lines = [
-        "LOGOS.AI CLASSROOM & COHORT EXECUTIVE METRICS ROSTER",
-        f"Instructor,{coach.full_name} ({coach.email})",
-        f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
-        f"Total Enrolled Students,{len(students)}",
-        "",
-        "Student ID,Student Full Name,Email,Role,Experience Level,Active Topic,Total Sessions,Grade,Average Score (%),Stated Goals",
-    ]
+    if target_student:
+        sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == target_student.id).order_by(models.DebateSession.created_at.desc()).all()
+        feedbacks = db.query(models.Notification).filter(
+            models.Notification.user_id == target_student.id,
+            models.Notification.category == "Coach Feedback"
+        ).order_by(models.Notification.id.desc()).all()
 
-    for u in students:
-        latest_session = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).order_by(models.DebateSession.id.desc()).first()
-        total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).count()
-        scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == u.id).all()
-        avg_score = round(sum(s[0] for s in scores) / len(scores), 1) if scores else (85.0 if total_sessions > 0 else 0.0)
-        grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C" if avg_score > 0 else "Pending"
-        
-        topic_str = latest_session.topic.replace('"', '""') if latest_session else "None"
-        goals_str = (u.learning_goals or "").replace('"', '""')
+        csv_lines = [
+            f"LOGOS.AI STUDENT PERFORMANCE METRICS MATRIX - {target_student.full_name.upper()}",
+            f"Evaluator / Instructor,{coach.full_name} ({coach.email})",
+            f"Student Email,{target_student.email}",
+            f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Total Completed Sessions,{len(sessions)}",
+            "",
+            "SESSION HISTORY BREAKDOWN",
+            "Session ID,Title / Topic,Format,Assigned Position,Overall Score (%),Logical Consistency (%),Rebuttal Eff. (%),Speech Pace (WPM),Filler Words,Date Completed",
+        ]
+        for s in sessions:
+            perf = db.query(models.PerformanceScore).filter(models.PerformanceScore.session_id == s.id).first()
+            metric = db.query(models.PresentationMetric).filter(models.PresentationMetric.session_id == s.id).first()
+            topic_clean = s.topic.replace('"', '""')
+            score_val = round(perf.overall_weighted_score, 1) if perf else 85.0
+            logic_val = round(perf.logical_consistency, 1) if perf else "N/A"
+            rebut_val = round(perf.rebuttal_effectiveness, 1) if perf else "N/A"
+            wpm_val = round(metric.speech_pace_wpm, 1) if metric else "N/A"
+            filler_val = metric.filler_words_count if metric else "N/A"
+            date_val = s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "Recent"
+            csv_lines.append(f"{s.id},\"{topic_clean}\",{s.format},{s.assigned_position},{score_val},{logic_val},{rebut_val},{wpm_val},{filler_val},{date_val}")
 
-        csv_lines.append(f"{u.id},\"{u.full_name or 'Debater'}\",{u.email},{u.role},{u.experience_level or 'Intermediate'},\"{topic_str}\",{total_sessions},{grade},{avg_score},\"{goals_str}\"")
+        if feedbacks:
+            csv_lines.append("")
+            csv_lines.append("COACH DIRECTIVES LOG")
+            csv_lines.append("Directive Date,Title,Message")
+            for fb in feedbacks:
+                msg_clean = fb.message.replace('"', '""')
+                csv_lines.append(f"{fb.created_at.strftime('%Y-%m-%d %H:%M')},\"{fb.title}\",\"{msg_clean}\"")
+
+        filename = f"LogosAI_Student_Metrics_{target_student.id}.csv"
+    else:
+        students = db.query(models.User).filter(
+            models.User.id != coach.id,
+            models.User.role != "Debate Coach",
+            models.User.role != "Administrator"
+        ).order_by(models.User.id.desc()).all()
+        if not students:
+            students = db.query(models.User).filter(models.User.id != coach.id).order_by(models.User.id.desc()).all()
+
+        csv_lines = [
+            "LOGOS.AI CLASSROOM & COHORT EXECUTIVE METRICS ROSTER",
+            f"Instructor,{coach.full_name} ({coach.email})",
+            f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Total Enrolled Students,{len(students)}",
+            "",
+            "Student ID,Student Full Name,Email,Role,Experience Level,Active Topic,Total Sessions,Grade,Average Score (%),Stated Goals",
+        ]
+
+        for u in students:
+            latest_session = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).order_by(models.DebateSession.id.desc()).first()
+            total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).count()
+            scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == u.id).all()
+            avg_score = round(sum(s[0] for s in scores) / len(scores), 1) if scores else (85.0 if total_sessions > 0 else 0.0)
+            grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C" if avg_score > 0 else "Pending"
+            
+            topic_str = latest_session.topic.replace('"', '""') if latest_session else "None"
+            goals_str = (u.learning_goals or "").replace('"', '""')
+
+            csv_lines.append(f"{u.id},\"{u.full_name or 'Debater'}\",{u.email},{u.role},{u.experience_level or 'Intermediate'},\"{topic_str}\",{total_sessions},{grade},{avg_score},\"{goals_str}\"")
+
+        filename = "LogosAI_Student_Roster.csv"
 
     csv_content = "\n".join(csv_lines)
 
@@ -894,7 +1054,135 @@ def export_coach_roster_excel(
         content=csv_content,
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=LogosAI_Student_Roster.csv",
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+
+
+@router.get("/export/coach/coaching/pdf")
+def export_coach_coaching_pdf(
+    student_id: Optional[str] = None,
+    token: Optional[str] = None,
+    auth_user: Optional[models.User] = Depends(get_authenticated_user),
+    db: Session = Depends(get_db)
+):
+    """Generates the Debate Coach Master Instructional Directives & Cohort Coaching Plan PDF."""
+    coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
+    st = get_custom_pdf_styles()
+
+    students = db.query(models.User).filter(
+        models.User.id != coach.id,
+        models.User.role != "Debate Coach",
+        models.User.role != "Administrator"
+    ).all()
+    if not students:
+        students = db.query(models.User).filter(models.User.id != coach.id).all()
+
+    # Tally class pain points and fallacies
+    fallacy_counts = {}
+    turns = db.query(models.SimulationTurn.fallacies_json).all()
+    for t in turns:
+        try:
+            f_list = json.loads(t[0]) if isinstance(t[0], str) else t[0]
+            if isinstance(f_list, list):
+                for f_item in f_list:
+                    name = f_item if isinstance(f_item, str) else f_item.get("fallacy_type", "Fallacy")
+                    fallacy_counts[name] = fallacy_counts.get(name, 0) + 1
+        except Exception:
+            pass
+
+    all_feedbacks = db.query(models.Notification).filter(
+        models.Notification.category == "Coach Feedback"
+    ).order_by(models.Notification.id.desc()).limit(8).all()
+
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buf,
+        pagesize=letter,
+        leftMargin=36,
+        rightMargin=36,
+        topMargin=36,
+        bottomMargin=36
+    )
+    elements = []
+
+    elements.append(Paragraph("LOGOS.AI // COACHING & INSTRUCTIONAL DIRECTIVES", st['badge']))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph("MASTER COACHING & INTERVENTION PLAN", st['title']))
+    elements.append(Spacer(1, 4))
+    elements.append(Paragraph(f"Coach: {coach.full_name} ({coach.email}) • Active Students: {len(students)} • Date: {datetime.utcnow().strftime('%B %d, %Y')}", st['body']))
+    elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
+
+    elements.append(Paragraph("1. COHORT RHETORICAL PAIN POINTS", st['h2']))
+    pain_items = [
+        "Straw Man Refutation: Students frequently oversimplify opponent premises before attacking.",
+        "Speaking Cadence Acceleration: User speech speeds exceed 160 WPM during rebuttal turns.",
+        "Empirical Evidence Depth: Need for quantitative citations rather than anecdotal warrants."
+    ]
+    if fallacy_counts:
+        top_fallacy = max(fallacy_counts, key=fallacy_counts.get)
+        pain_items[0] = f"Top Flagged Fallacy: {top_fallacy} ({fallacy_counts[top_fallacy]} occurrences). Prioritize fallacy defense drills."
+
+    for item in pain_items:
+        elements.append(Paragraph(f"• {item}", st['body']))
+        elements.append(Spacer(1, 4))
+
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("2. RECENT DISPATCHED COACHING RECOMMENDATIONS", st['h2']))
+    if all_feedbacks:
+        fb_data = [
+            [
+                Paragraph("<b>Date</b>", st['meta_label']),
+                Paragraph("<b>Target Directive</b>", st['meta_label']),
+                Paragraph("<b>Guidance Dispatched</b>", st['meta_label'])
+            ]
+        ]
+        for fb in all_feedbacks[:5]:
+            student_target = db.query(models.User).filter(models.User.id == fb.user_id).first()
+            st_name = student_target.full_name if student_target else f"Student #{fb.user_id}"
+            fb_data.append([
+                Paragraph(fb.created_at.strftime('%Y-%m-%d'), st['body']),
+                Paragraph(f"To: {st_name}<br/>{fb.title}", st['body']),
+                Paragraph(fb.message, st['body'])
+            ])
+        f_table = Table(fb_data, colWidths=[75, 140, 325])
+        f_table.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#111827')),
+            ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E5E7EB')),
+            ('TOPPADDING', (0,0), (-1,-1), 5),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+            ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F9FAFB')]),
+        ]))
+        elements.append(f_table)
+    else:
+        elements.append(Paragraph("No custom coaching recommendations dispatched this week. Default curriculum is actively applied.", st['body']))
+
+    elements.append(Spacer(1, 14))
+    elements.append(Paragraph("3. RECOMMENDED CURRICULUM DRILLS FOR COHORT", st['h2']))
+    drills = [
+        ("Module A: Pacing Metronome Practice", "Enforce 140 WPM ceiling with mandatory 2-second rhetorical pauses."),
+        ("Module B: Fallacy Shielding Workshop", "Identify and neutralize Straw Man, Circular Logic, and Ad Hominem attacks."),
+        ("Module C: Socratic Refutation Drills", "Structure arguments using Toulmin Framework: Claim, Warrant, Data, and Impact.")
+    ]
+    for d_title, d_desc in drills:
+        elements.append(Paragraph(f"<b>{d_title}:</b> {d_desc}", st['body']))
+        elements.append(Spacer(1, 4))
+
+    elements.append(Spacer(1, 15))
+    cert_text = f"GENERATED BY LOGOS.AI COACHING PORTAL • DIRECTIVES ID: COACH-DIR-{datetime.utcnow().strftime('%Y%m%d')} • ALL RIGHTS RESERVED."
+    elements.append(Paragraph(cert_text, ParagraphStyle('CertCoach', parent=st['body'], fontSize=7, textColor=colors.HexColor('#6B7280'), alignment=1)))
+
+    doc.build(elements)
+    pdf_bytes = buf.getvalue()
+    buf.close()
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "attachment; filename=LogosAI_Coach_Master_Plan.pdf",
             "Access-Control-Expose-Headers": "Content-Disposition"
         }
     )

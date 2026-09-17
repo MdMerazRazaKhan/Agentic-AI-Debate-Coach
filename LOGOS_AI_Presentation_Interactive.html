@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LOGOS.AI — Master Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #070B14;
+      --card-bg: rgba(17, 24, 39, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-red: #E11D48;
+      --accent-blue: #38BDF8;
+      --accent-emerald: #10B981;
+      --accent-amber: #F59E0B;
+      --accent-purple: #A855F7;
+      --text-white: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Ambient dynamic background lighting */
+    .ambient-glow {
+      position: absolute;
+      width: 650px;
+      height: 650px;
+      background: radial-gradient(circle, rgba(225, 29, 72, 0.12) 0%, rgba(56, 189, 248, 0.05) 50%, transparent 70%);
+      top: -150px;
+      left: -150px;
+      pointer-events: none;
+      filter: blur(80px);
+      z-index: 0;
+      animation: floatGlow 14s ease-in-out infinite alternate;
+    }
+
+    .ambient-glow-2 {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.09) 0%, rgba(168, 85, 247, 0.04) 50%, transparent 70%);
+      bottom: -150px;
+      right: -150px;
+      pointer-events: none;
+      filter: blur(90px);
+      z-index: 0;
+      animation: floatGlow 18s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(80px, 60px) scale(1.15); }
+    }
+
+    /* Presentation Stage Container (Aspect ratio 16:9) */
+    .deck-container {
+      width: 94vw;
+      max-width: 1440px;
+      height: 86vh;
+      max-height: 810px;
+      position: relative;
+      perspective: 1000px;
+      z-index: 1;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      background: rgba(13, 19, 33, 0.85);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 3rem 4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(25px) scale(0.98);
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05) inset;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
+    /* Header structure */
+    .slide-header {
+      margin-bottom: 1.5rem;
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(225, 29, 72, 0.15);
+      color: var(--accent-red);
+      border: 1px solid rgba(225, 29, 72, 0.3);
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 0.75rem;
+    }
+
+    .slide-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.3rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-white);
+      line-height: 1.2;
+    }
+
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+      font-weight: 400;
+    }
+
+    /* Slide Content Area */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      gap: 1.5rem;
+      align-items: stretch;
+      min-height: 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s ease, transform 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .card.accent-red { border-top: 3px solid var(--accent-red); }
+    .card.accent-blue { border-top: 3px solid var(--accent-blue); }
+    .card.accent-emerald { border-top: 3px solid var(--accent-emerald); }
+    .card.accent-purple { border-top: 3px solid var(--accent-purple); }
+    .card.accent-amber { border-top: 3px solid var(--accent-amber); }
+
+    .card-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-white);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .card-list li {
+      color: var(--text-muted);
+      position: relative;
+      padding-left: 1.4rem;
+    }
+
+    .card-list li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: var(--accent-red);
+      font-size: 1.4rem;
+      line-height: 1;
+      top: -1px;
+    }
+
+    .card-list li strong {
+      color: var(--text-white);
+      font-weight: 600;
+    }
+
+    /* Stat Box Callout */
+    .stat-number {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 900;
+      color: var(--text-white);
+      margin-bottom: 0.3rem;
+      line-height: 1;
+    }
+
+    /* Sequence Flow Elements */
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.2rem;
+      width: 100%;
+    }
+
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.4rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      position: relative;
+    }
+
+    .step-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 0.4rem;
+    }
+
+    .step-heading {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: var(--text-white);
+    }
+
+    .step-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+    }
+
+    /* Footer Meta Bar */
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1.2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .footer-brand {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-white);
+    }
+
+    /* Presentation Navigation Controls */
+    .nav-controls {
+      position: absolute;
+      bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: rgba(17, 24, 39, 0.8);
+      border: 1px solid var(--card-border);
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .btn-nav {
+      background: transparent;
+      border: none;
+      color: var(--text-white);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .btn-nav:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .slide-indicator {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    /* Title Slide Custom Hero Styling */
+    .title-slide {
+      justify-content: center;
+      text-align: center;
+      align-items: center;
+    }
+
+    .title-hero {
+      font-family: 'Outfit', sans-serif;
+      font-size: 5rem;
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1;
+      background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 50%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .title-subhero {
+      font-size: 1.65rem;
+      font-weight: 600;
+      color: var(--accent-blue);
+      margin-bottom: 1.2rem;
+    }
+
+    .title-quote {
+      font-style: italic;
+      color: var(--text-muted);
+      font-size: 1.15rem;
+      max-width: 800px;
+      margin: 0 auto 2.5rem auto;
+      line-height: 1.6;
+    }
+
+    .title-meta-grid {
+      display: flex;
+      gap: 3rem;
+      font-size: 0.9rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 1.5rem;
+    }
+
+    .meta-col {
+      text-align: left;
+    }
+
+    .meta-col span {
+      display: block;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-red);
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-col strong {
+      color: var(--text-white);
+      font-size: 0.95rem;
+    }
+
+    /* Taxonomy Code Box */
+    .taxonomy-box {
+      background: rgba(11, 15, 25, 0.9);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 10px;
+      padding: 1.2rem 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #E2E8F0;
+      line-height: 1.7;
+      margin-top: 1rem;
+    }
+
+    .taxonomy-box span {
+      color: var(--accent-amber);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow"></div>
+  <div class="ambient-glow-2"></div>
+
+  <div class="deck-container">
+
+    <!-- SLIDE 1: COVER -->
+    <div class="slide active title-slide" id="slide-1">
+      <div>
+        <div class="pill-badge">LOGOS.AI // AUTONOMOUS AGENTIC INTELLIGENCE</div>
+        <h1 class="title-hero">LOGOS.AI</h1>
+        <div class="title-subhero">Agentic AI Debate Coach & Presentation Analytics Platform</div>
+        <p class="title-quote">
+          “From Passive Information Retrieval to Active Socratic Cross-Examination and Vocal Mastery”
+        </p>
+      </div>
+
+      <div class="title-meta-grid">
+        <div class="meta-col">
+          <span>Project Lead & Engineer</span>
+          <strong>Md Meraz Raza Khan</strong>
+        </div>
+        <div class="meta-col">
+          <span>Core Tech Stack</span>
+          <strong>FastAPI • Next.js 14 • Groq/Gemini • Hybrid DB</strong>
+        </div>
+        <div class="meta-col">
+          <span>Target Horizon</span>
+          <strong>Agentic Pedagogy & Speech Telemetry</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: PROBLEM STATEMENT -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <div class="pill-badge">Problem Statement & Motivation</div>
+        <div class="slide-title">The Rhetorical Training Dilemma</div>
+        <div class="slide-subtitle">Why traditional solo rehearsal and standard conversational LLMs fall short.</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="card accent-red">
+          <div class="card-title">❌ The Rehearsal Friction</div>
+          <ul class="card-list">
+            <li><strong>Mirror Rehearsals Lack Friction:</strong> Speakers practice into mirrors with zero dynamic resistance or adversarial rebuttals.</li>
+            <li><strong>Undetected Fallacy Traps:</strong> Subtle reasoning flaws (Ad Hominem, Straw Man) go unnoticed until high-stakes competitions.</li>
+            <li><strong>Prosody Disconnect:</strong> Speaking cadence, pause frequency, and filler words cannot be calibrated through silent reading.</li>
+            <li><strong>Conventional AI Agreeableness:</strong> Standard ChatGPT models are trained to validate and agree, failing to challenge premises.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-emerald">
+          <div class="card-title">✔ The LOGOS.AI Solution</div>
+          <ul class="card-list">
+            <li><strong>Autonomous Socratic Sparring:</strong> Dedicated opponent personas (The Contrarian, Academic) push back with human-like rigor.</li>
+            <li><strong>Real-Time Fallacy Shield:</strong> Instant algorithmic and semantic classification across 8 canonical fallacy frameworks.</li>
+            <li><strong>Live Acoustic Delivery Telemetry:</strong> In-browser speech processor measuring pace (target 130-150 WPM) and filler word counts.</li>
+            <li><strong>Longitudinal Mastery Loop:</strong> Actionable coaching action plans, classroom assignments, and institutional rubrics.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Problem Statement & Objective Framing</div>
+        <div>02 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: OBJECTIVES & PILLARS -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <div class="pill-badge">Project Scope</div>
+        <div class="slide-title">Three Architectural Pillars</div>
+        <div class="slide-subtitle">Foundational capabilities driving automated rhetorical mastery.</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="card accent-blue">
+          <div class="pill-badge" style="background: rgba(56,189,248,0.15); color: var(--accent-blue); border-color: rgba(56,189,248,0.3);">Pillar 01</div>
+          <div class="card-title">Socratic Simulation</div>
+          <ul class="card-list">
+            <li><strong>Adversarial Personas:</strong> The Contrarian, The Academic, and Socratic Inquirer with calibrated stubbornness.</li>
+            <li><strong>Typewriter Terminal:</strong> Character-by-character live streaming rebuttal replicating real human conversational cadence.</li>
+            <li><strong>Stateful History:</strong> Maintains dialectic argument context across multi-turn cross-examination rounds.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-red">
+          <div class="pill-badge" style="background: rgba(225,29,72,0.15); color: var(--accent-red); border-color: rgba(225,29,72,0.3);">Pillar 02</div>
+          <div class="card-title">Fallacy & Logic Guard</div>
+          <ul class="card-list">
+            <li><strong>8 Fallacy Classifiers:</strong> Identifies Straw Man, False Dilemma, Slippery Slope, Ad Hominem, and Circular logic.</li>
+            <li><strong>Real-Time Alert Badges:</strong> Visual badges flash over arguments with impact severity scores.</li>
+            <li><strong>Remediation Drills:</strong> Actionable counter-rebuttal coaching tips to recover argumentation integrity.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-emerald">
+          <div class="pill-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-emerald); border-color: rgba(16,185,129,0.3);">Pillar 03</div>
+          <div class="card-title">Acoustic Prosody & LMS</div>
+          <ul class="card-list">
+            <li><strong>Cadence Benchmarks:</strong> Calibrates user speech speed against debate standards (130-150 WPM).</li>
+            <li><strong>Filler Word Density:</strong> Real-time detection and penalty scoring for hesitation pauses.</li>
+            <li><strong>Multi-Role Platform:</strong> Institutional governance across Learners, Coaches, Educators, and Admins.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Core Architecture Pillars</div>
+        <div>03 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: SOCRATIC LOOP -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <div class="pill-badge">Pedagogical Framework</div>
+        <div class="slide-title">The Socratic Cross-Examination Loop</div>
+        <div class="slide-subtitle">Transforming unstructured debate arguments into rigorous dialectic reasoning.</div>
+      </div>
+
+      <div class="slide-body" style="flex-direction: column; gap: 1rem;">
+        <div class="flow-grid">
+          <div class="flow-step">
+            <div class="step-number">STEP 01</div>
+            <div class="step-heading">Claim Ingestion</div>
+            <div class="step-text">User audio or text transcript is parsed into premise propositions, factual evidence, and logical warrants.</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-number" style="color: var(--accent-red);">STEP 02</div>
+            <div class="step-heading">Fallacy Auditing</div>
+            <div class="step-text">Dual-engine regex and zero-shot reasoning models cross-examine arguments against 8 canonical fallacy schemas.</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-number" style="color: var(--accent-purple);">STEP 03</div>
+            <div class="step-heading">Persona Rebuttal</div>
+            <div class="step-text">Contrarian agent attacks underlying weaknesses with targeted cross-examination questions and pressure.</div>
+          </div>
+          <div class="flow-step">
+            <div class="step-number" style="color: var(--accent-emerald);">STEP 04</div>
+            <div class="step-heading">Mastery Synthesis</div>
+            <div class="step-text">Generates instant corrective tips, strength ratings, and tailored exercises to close specific rhetorical skill gaps.</div>
+          </div>
+        </div>
+
+        <div class="taxonomy-box">
+          <span>CANONICAL FALLACY TAXONOMY AUDITED IN REAL TIME:</span><br>
+          • Ad Hominem &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Straw Man &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• False Dilemma &nbsp;&nbsp;&nbsp;• Slippery Slope<br>
+          • Circular Reasoning &nbsp;• Appeal to Emotion &nbsp;• Red Herring &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Hasty Generalization
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Dialectic Framework</div>
+        <div>04 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: TECH STACK & ARCHITECTURE -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <div class="pill-badge">System Implementation</div>
+        <div class="slide-title">Full-Stack Production Architecture</div>
+        <div class="slide-subtitle">Engineered for asynchronous concurrency, sub-second inference, and data integrity.</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="card accent-blue">
+          <div class="card-title">Client Tier</div>
+          <ul class="card-list">
+            <li><strong>Next.js 14 App Router:</strong> Server rendering and fast client route transitions.</li>
+            <li><strong>Web Audio API:</strong> Real-time microphone buffer analysis.</li>
+            <li><strong>Cyber Obsidian UI:</strong> Sharp zero-border-radius design aesthetic.</li>
+            <li><strong>Stateful JWT Auth:</strong> Role-aware authorization headers.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-red">
+          <div class="card-title">API Gateway</div>
+          <ul class="card-list">
+            <li><strong>Python FastAPI:</strong> Asynchronous high-throughput non-blocking routing.</li>
+            <li><strong>Pydantic V2 Models:</strong> Strict runtime validation and serialization.</li>
+            <li><strong>Uvicorn Daemon:</strong> Multi-worker ASGI daemon on 0.0.0.0.</li>
+            <li><strong>CORS Protection:</strong> Multi-origin policy allowing both localhost and IP.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-purple">
+          <div class="card-title">AI Inference</div>
+          <ul class="card-list">
+            <li><strong>Groq Cloud Hardware:</strong> LPU acceleration for sub-450ms turn latency.</li>
+            <li><strong>Google Gemini 1.5/2.0:</strong> Automatic resilient fallback pipeline.</li>
+            <li><strong>Socratic System Prompts:</strong> Persona-constrained reasoning models.</li>
+            <li><strong>Modular Agent Pipeline:</strong> Decoupled analyzer and opponent nodes.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-emerald">
+          <div class="card-title">Hybrid Persistence</div>
+          <ul class="card-list">
+            <li><strong>PostgreSQL / SQLite:</strong> Relational ACID layer for classrooms and accounts.</li>
+            <li><strong>SQLAlchemy 2.0 ORM:</strong> Structured query compilation.</li>
+            <li><strong>MongoDB Transcripts:</strong> High-throughput document store for turns.</li>
+            <li><strong>ReportLab Engine:</strong> Automated cryptographic PDF dossiers.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>System Architecture</div>
+        <div>05 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: AGENTIC WORKFLOW -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <div class="pill-badge">Autonomous Multi-Agent Framework</div>
+        <div class="slide-title">Multi-Agent Workflow & Orchestration</div>
+        <div class="slide-subtitle">Specialized autonomous agents operating concurrently during cross-examination.</div>
+      </div>
+
+      <div class="slide-body" style="flex-direction: column; gap: 0.8rem;">
+        <div class="card accent-blue" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Agent 01: Argument Analysis Agent</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Deconstructs raw user arguments into core propositions and supporting warrants, validating evidence quality and premise coherence before generating rebuttals.
+          </p>
+        </div>
+
+        <div class="card accent-red" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Agent 02: Fallacy Detection Agent</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Executes dual-stage semantic pattern recognition and zero-shot reasoning to pinpoint logical traps, calculate confidence percentages, and assign severity ratings.
+          </p>
+        </div>
+
+        <div class="card accent-purple" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Agent 03: Socratic Opponent Agent</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Adopts designated adversarial debate personas ('The Contrarian', 'The Academic') generating targeted cross-examination counter-rebuttals to pressure-test the debater.
+          </p>
+        </div>
+
+        <div class="card accent-emerald" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Agent 04: Pedagogical Coaching Agent</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Aggregates full round telemetry, evaluates rebuttal strength metrics, and synthesizes structured recommendations and training drills to remediate identified weaknesses.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Multi-Agent Framework</div>
+        <div>06 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: VOCAL METRICS & SPEECH PROSODY -->
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <div class="pill-badge">Acoustic Intelligence</div>
+        <div class="slide-title">Speech Prosody & Delivery Analytics</div>
+        <div class="slide-subtitle">Quantifying speaking cadence, verbal hesitation, and acoustic confidence.</div>
+      </div>
+
+      <div class="slide-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        <div class="card accent-blue">
+          <div class="pill-badge" style="background: rgba(56,189,248,0.15); color: var(--accent-blue); border-color: rgba(56,189,248,0.3);">Pacing Standard</div>
+          <div class="stat-number">130 – 150 WPM</div>
+          <div class="card-title" style="font-size: 1.1rem;">Optimal Cadence Calibration</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+            Monitors speaking rate against competitive speech benchmarks. Automated visual warnings trigger if delivery is rushed (>165 WPM) or sluggish (<115 WPM).
+          </p>
+        </div>
+
+        <div class="card accent-red">
+          <div class="pill-badge" style="background: rgba(225,29,72,0.15); color: var(--accent-red); border-color: rgba(225,29,72,0.3);">Verbal Crutch Tracking</div>
+          <div class="stat-number">&lt; 2.0% Density</div>
+          <div class="card-title" style="font-size: 1.1rem;">Filler Word Mitigation</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+            Real-time identification of hesitation words ("um", "uh", "you know", "basically"). Calculates verbal pause frequency and applies weighted score deductions.
+          </p>
+        </div>
+
+        <div class="card accent-emerald">
+          <div class="pill-badge" style="background: rgba(16,185,129,0.15); color: var(--accent-emerald); border-color: rgba(16,185,129,0.3);">Acoustic Index</div>
+          <div class="stat-number">0 – 100 Score</div>
+          <div class="card-title" style="font-size: 1.1rem;">Vocal Clarity & Modulation</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+            Synthesizes cadence consistency, audio pause duration, and diction articulation into an actionable vocal clarity metric for speaker development.
+          </p>
+        </div>
+
+        <div class="card accent-amber">
+          <div class="pill-badge" style="background: rgba(245,158,11,0.15); color: var(--accent-amber); border-color: rgba(245,158,11,0.3);">Live Audio Spectrum</div>
+          <div class="stat-number">Real-Time RMS</div>
+          <div class="card-title" style="font-size: 1.1rem;">WebAudio Biofeedback</div>
+          <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">
+            Browser-side audio context analyzer rendering dynamic audio frequency bars, providing debaters with instant visual cues on their vocal projection.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Acoustic Analytics</div>
+        <div>07 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: ROLE-BASED ACCESS & HYBRID DATA LAKE -->
+    <div class="slide" id="slide-8">
+      <div class="slide-header">
+        <div class="pill-badge">Governance & Storage</div>
+        <div class="slide-title">Multi-Role LMS & Hybrid Database Architecture</div>
+        <div class="slide-subtitle">Engineered for institutional scale, ACID security, and longitudinal analytics.</div>
+      </div>
+
+      <div class="slide-body" style="flex-direction: column; gap: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem;">
+          <div class="card accent-blue" style="padding: 1.3rem;">
+            <div class="card-title" style="font-size: 1.1rem;">Learner</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Socratic debate terminal, live speech analysis, historical debate archives, and personalized skill gap drills.
+            </p>
+          </div>
+          <div class="card accent-red" style="padding: 1.3rem;">
+            <div class="card-title" style="font-size: 1.1rem;">Debate Coach</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Student cohort roster monitoring, transcript inspection, asynchronous feedback dispatch, and rubric score validation.
+            </p>
+          </div>
+          <div class="card accent-emerald" style="padding: 1.3rem;">
+            <div class="card-title" style="font-size: 1.1rem;">Educator</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              Classroom creation, curriculum topic assignments, student enrollment codes, and multi-criteria debate rubric construction.
+            </p>
+          </div>
+          <div class="card accent-amber" style="padding: 1.3rem;">
+            <div class="card-title" style="font-size: 1.1rem;">Administrator</div>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">
+              System diagnostic telemetry, platform security audit logs, database connection pooling, and global platform notice broadcast.
+            </p>
+          </div>
+        </div>
+
+        <div class="card" style="background: rgba(11, 15, 25, 0.9); border: 1px solid rgba(56, 189, 248, 0.3); padding: 1.4rem;">
+          <div style="color: var(--accent-blue); font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; text-transform: uppercase;">
+            Hybrid Storage Architecture: ACID Relational + High-Throughput NoSQL
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.6;">
+            • <strong>PostgreSQL / SQLite Layer:</strong> Strict ACID transactional storage for user credentials, roles, classrooms, and rubric standards.<br>
+            • <strong>MongoDB Document Lake:</strong> High-throughput JSON document store streaming turn transcripts, real-time fallacy logs, and vocal matrices.<br>
+            • <strong>Zero Coupling:</strong> Database operations are non-blocking—even during transcript indexing, auth and live debate remain 100% online.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Multi-Role Architecture</div>
+        <div>08 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: USER EXPERIENCE -->
+    <div class="slide" id="slide-9">
+      <div class="slide-header">
+        <div class="pill-badge">User Experience</div>
+        <div class="slide-title">Interactive Debate Simulation Terminal</div>
+        <div class="slide-subtitle">Cinematic cyberpunk visual design combined with real-time analytical feedback.</div>
+      </div>
+
+      <div class="slide-body" style="flex-direction: column; gap: 0.8rem;">
+        <div class="card accent-blue" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Real-Time Typewriter Rebuttals</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Opponent argument streams letter-by-letter, simulating realistic human pause and speech tempo to keep debaters mentally engaged during cross-examination rounds.
+          </p>
+        </div>
+
+        <div class="card accent-red" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Interactive Fallacy Badges</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Color-coded badges (e.g. [STRAW MAN], [AD HOMINEM]) flash immediately above arguments with detailed explanations and remediation advice.
+          </p>
+        </div>
+
+        <div class="card accent-emerald" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">Radar Matrix Skill Assessment</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Dynamic skill polygon evaluating 5 critical debate competencies: Logical Consistency, Argument Construction, Vocal Pacing, Filler Control, and Rebuttal Power.
+          </p>
+        </div>
+
+        <div class="card accent-amber" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">One-Click PDF Executive Exports</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            ReportLab automated PDF generation creates presentation evaluation dossiers and debater report cards with cryptographic timestamps.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>User Experience</div>
+        <div>09 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: ENGINEERING CHALLENGES -->
+    <div class="slide" id="slide-10">
+      <div class="slide-header">
+        <div class="pill-badge">Engineering Deep Dive</div>
+        <div class="slide-title">Challenges & Technical Solutions</div>
+        <div class="slide-subtitle">Solving latency, browser-level audio constraints, and dual-database concurrency.</div>
+      </div>
+
+      <div class="slide-body">
+        <div class="card accent-red">
+          <div class="pill-badge" style="background: rgba(225,29,72,0.15); color: var(--accent-red); border-color: rgba(225,29,72,0.3);">Challenge 01</div>
+          <div class="card-title">LLM Inference Latency</div>
+          <ul class="card-list">
+            <li><strong>Problem:</strong> Standard LLM generation took >2.5s, breaking high-stakes debate pacing.</li>
+            <li><strong>Solution:</strong> Integrated Groq LPU hardware acceleration, dropping turnaround to &lt;450ms.</li>
+            <li><strong>Resilience:</strong> Automatic failover fallback to Google Gemini models ensures zero downtime.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-amber">
+          <div class="pill-badge" style="background: rgba(245,158,11,0.15); color: var(--accent-amber); border-color: rgba(245,158,11,0.3);">Challenge 02</div>
+          <div class="card-title">Browser Audio Codecs</div>
+          <ul class="card-list">
+            <li><strong>Problem:</strong> Microphone sample rates and codec permissions varied widely across clients.</li>
+            <li><strong>Solution:</strong> Standardized on Web Audio API audio-context buffer streaming.</li>
+            <li><strong>Graceful Fallback:</strong> Synthetic mock-prosody simulations maintain full functionality if mic is blocked.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-blue">
+          <div class="pill-badge" style="background: rgba(56,189,248,0.15); color: var(--accent-blue); border-color: rgba(56,189,248,0.3);">Challenge 03</div>
+          <div class="card-title">Dual-DB Concurrency</div>
+          <ul class="card-list">
+            <li><strong>Problem:</strong> Concurrently writing to PostgreSQL and MongoDB risked API worker blocking.</li>
+            <li><strong>Solution:</strong> Transcripts are flushed via non-blocking background routines.</li>
+            <li><strong>Fault Isolation:</strong> MongoDB connection timeouts are safely caught without dropping auth sessions.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Engineering Deep Dive</div>
+        <div>10 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: FUTURE ROADMAP -->
+    <div class="slide" id="slide-11">
+      <div class="slide-header">
+        <div class="pill-badge">Strategic Vision</div>
+        <div class="slide-title">Next-Stage Enhancements & Roadmap</div>
+        <div class="slide-subtitle">Expanding from audio-text debate coaching into full multi-modal rhetorical simulation.</div>
+      </div>
+
+      <div class="slide-body" style="flex-direction: column; gap: 0.8rem;">
+        <div class="card accent-blue" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">01. WebRTC Computer Vision Cues</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Integrating MediaPipe visual posture tracking to audit eye contact, nervous hand gestures, and body language during speeches.
+          </p>
+        </div>
+
+        <div class="card accent-red" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">02. Tournament Multiplayer Matchmaking</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Connecting human debaters in synchronized tournament rooms with an autonomous AI judge awarding speaker points and adjudication decisions.
+          </p>
+        </div>
+
+        <div class="card accent-purple" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">03. Fine-Tuned Rhetorical LoRA Models</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Training open-weights models specifically on parliamentary debate transcripts (APDA / British Parliamentary formats) for elite competition.
+          </p>
+        </div>
+
+        <div class="card accent-emerald" style="padding: 1.1rem 1.5rem;">
+          <div class="card-title" style="font-size: 1.1rem; margin-bottom: 0.3rem;">04. Institutional LMS LTI Integration</div>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">
+            Direct gradebook and assignment synchronization with Canvas, Blackboard, and Google Classroom for high schools and universities.
+          </p>
+        </div>
+      </div>
+
+      <div class="slide-footer">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Future Roadmap</div>
+        <div>11 / 12</div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: CONCLUSION -->
+    <div class="slide title-slide" id="slide-12">
+      <div>
+        <div class="pill-badge">Conclusion & Impact</div>
+        <h1 class="title-hero" style="font-size: 3.5rem;">Empowering Persuasive Thinkers</h1>
+        <p class="title-quote" style="margin-top: 1rem; font-size: 1.15rem;">
+          LOGOS.AI transforms public speaking and debate education from passive consumption into an active, 
+          adversarial mastery loop. By unifying Socratic Opponent Simulations, Real-Time Fallacy Auditing, 
+          and Acoustic Delivery Telemetry, speakers develop bulletproof reasoning and commanding stage presence.
+        </p>
+        <div style="font-family: 'Outfit', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent-blue); margin-top: 2rem;">
+          THANK YOU • QUESTIONS & DISCUSSION
+        </div>
+      </div>
+
+      <div class="slide-footer" style="width: 100%;">
+        <div class="footer-brand">LOGOS.AI</div>
+        <div>Open Floor for Committee Evaluation</div>
+        <div>12 / 12</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Navigation Bar Bottom -->
+  <div class="nav-controls">
+    <button class="btn-nav" id="prevBtn" title="Previous Slide (Left Arrow)">◀</button>
+    <div class="slide-indicator" id="slideIndicator">SLIDE 01 / 12</div>
+    <button class="btn-nav" id="nextBtn" title="Next Slide (Right Arrow)">▶</button>
+    <button class="btn-nav" id="fsBtn" title="Toggle Fullscreen (F)">⛶</button>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 12;
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const fsBtn = document.getElementById('fsBtn');
+    const indicator = document.getElementById('slideIndicator');
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+
+      currentSlide = index;
+
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        slide.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      indicator.textContent = `SLIDE ${String(currentSlide).padStart(2, '0')} / ${String(totalSlides).padStart(2, '0')}`;
+    }
+
+    prevBtn.addEventListener('click', () => showSlide(currentSlide - 1));
+    nextBtn.addEventListener('click', () => showSlide(currentSlide + 1));
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        showSlide(currentSlide + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        showSlide(currentSlide - 1);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      }
+    });
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {});
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    fsBtn.addEventListener('click', toggleFullscreen);
+  </script>
+</body>
+</html>

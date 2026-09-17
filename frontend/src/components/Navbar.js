@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -100,6 +100,16 @@ export default function Navbar() {
     }
   };
 
+  const handleEnginesClick = (e) => {
+    if (pathname === '/') {
+      e.preventDefault();
+      const el = document.getElementById('engines');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   const handleProtectedNav = (e, targetRoute) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
     if (!token) {
@@ -126,9 +136,13 @@ export default function Navbar() {
           LOGOS.AI
         </Link>
 
-        {/* Nav Links - Exact previous typography and link styling */}
+        {/* Nav Links: ENGINES, SIMULATION, VOCAL_METRICS, and DASHBOARD in a red box */}
         <div className="nav-links" style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          <Link href="/#engines" className="nav-link">
+          <Link 
+            href="/#engines" 
+            onClick={handleEnginesClick}
+            className="nav-link"
+          >
             ENGINES
           </Link>
           <Link 
@@ -148,25 +162,24 @@ export default function Navbar() {
           <Link 
             href="/dashboard" 
             onClick={(e) => handleProtectedNav(e, '/dashboard')}
-            className={`nav-link ${pathname === '/dashboard' ? 'active' : ''}`}
+            style={{
+              background: '#D90429',
+              color: '#FFFFFF',
+              padding: '0.45rem 1.1rem',
+              borderRadius: '8px',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              letterSpacing: '0.05em',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              boxShadow: '0 2px 8px rgba(217, 4, 41, 0.25)',
+              transition: 'all 0.18s ease'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#B00320'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#D90429'; e.currentTarget.style.transform = 'translateY(0)'; }}
           >
-            ANALYTICS
-          </Link>
-          <Link 
-            href="/reports" 
-            onClick={(e) => handleProtectedNav(e, '/reports')}
-            className={`nav-link ${pathname === '/reports' ? 'active' : ''}`}
-          >
-            REPORTS
-          </Link>
-          
-          <Link 
-            href="/simulation" 
-            onClick={(e) => handleProtectedNav(e, '/simulation')}
-            className="btn btn-red" 
-            style={{ padding: '0.45rem 1rem', fontSize: '0.75rem', borderRadius: '8px' }}
-          >
-            DEPLOY_AGENT
+            DASHBOARD
           </Link>
         </div>
 

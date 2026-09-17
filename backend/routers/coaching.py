@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from routers.auth import get_current_user
@@ -13,6 +15,9 @@ router = APIRouter(prefix="/api/v1/coaching", tags=["Recommendation & Coaching E
 class CoachFeedbackRequest(BaseModel):
     student_id: int
     feedback: str
+    grade: Optional[str] = None
+    marks: Optional[float] = None
+    session_id: Optional[int] = None
 
 
 @router.get("/plan/me", response_model=schemas.CoachingPlanResponse)
@@ -99,12 +104,101 @@ def get_coaching_plan(user_id: int, current_user: models.User = Depends(get_curr
             path_steps.append("Module: Advanced Parliamentary Refutation (Upcoming)")
             path_steps.append("Module: Socratic Cross-examination (Upcoming)")
             
+    # 4. Calculate letter grade and evaluator standing
+    all_scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == user_id).all()
+    if all_scores:
+        computed_avg = round(sum(s[0] for s in all_scores) / len(all_scores), 1)
+    else:
+        p_all = db.query(models.PresentationMetric).filter(models.PresentationMetric.user_id == user_id).all()
+        if p_all:
+            computed_avg = round(sum((m.confidence_score + m.clarity_score) / 2 for m in p_all) / len(p_all), 1)
+        else:
+            total_user_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == user_id).count()
+            computed_avg = 85.0 if total_user_sessions > 0 else 0.0
+
+    if computed_avg >= 90:
+        computed_grade = "A+"
+        standing_str = "Cohort Honor Roll // Top 5%"
+    elif computed_avg >= 85:
+        computed_grade = "A"
+        standing_str = "Advanced Debater // Top 15%"
+    elif computed_avg >= 80:
+        computed_grade = "A-"
+        standing_str = "Proficient Debater // Top 25%"
+    elif computed_avg >= 75:
+        computed_grade = "B+"
+        standing_str = "Competent Rhetorician"
+    elif computed_avg >= 70:
+        computed_grade = "B"
+        standing_str = "Developing Competitor"
+    elif computed_avg >= 60:
+        computed_grade = "C"
+        standing_str = "Foundational Stage"
+    elif computed_avg > 0:
+        computed_grade = "D"
+        standing_str = "Remedial Drills Recommended"
+    else:
+        computed_grade = "Pending"
+        standing_str = "Pending Coach Evaluation"
+
+    # Fetch existing plan if already saved in DB
+    plan = db.query(models.CoachingPlan).filter(models.CoachingPlan.user_id == user_id).first()
+
+    # Determine if an actual Debate Coach has officially graded this student
+    has_coach_graded = (
+        plan is not None 
+        and plan.assigned_grade is not None 
+        and plan.assigned_grade.strip() != "" 
+        and plan.assigned_grade.strip().lower() != "pending"
+    )
+
+    if has_coach_graded:
+        assigned_grade = plan.assigned_grade
+        assigned_marks = round(float(plan.assigned_marks), 1) if plan.assigned_marks is not None else 0.0
+        evaluator_name = plan.evaluator_name or "Debate Coach"
+        evaluator_role = "Debate Coach & Evaluator"
+        eval_status = "Assigned by Debate Coach"
+        standing_str = (
+            "Cohort Honor Roll // Top 5%" if assigned_grade.startswith("A") else
+            "Competent Rhetorician" if assigned_grade.startswith("B") else
+            "Developing Competitor" if assigned_grade.startswith("C") else "Foundational Stage"
+        )
+        last_graded_str = plan.updated_at.strftime("%Y-%m-%d %H:%M") if plan.updated_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        
+        # Fetch latest coach directive / feedback from Notification or Plan
+        latest_coach_notif = (
+            db.query(models.Notification)
+            .filter(models.Notification.user_id == user_id, models.Notification.category == "Coach Feedback")
+            .order_by(models.Notification.id.desc())
+            .first()
+        )
+        coach_feedback_text = latest_coach_notif.message if latest_coach_notif else (
+            plan.targeted_recommendations.split("\n")[0] if plan.targeted_recommendations else "Maintain structured rebuttal flow and focus on verifiable evidence."
+        )
+    else:
+        assigned_grade = "Pending"
+        assigned_marks = None
+        evaluator_name = None
+        evaluator_role = None
+        eval_status = "Pending Coach Assessment"
+        standing_str = "Pending Assessment"
+        last_graded_str = None
+        coach_feedback_text = "Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here."
+
     return {
         "user_id": user_id,
         "skill_gap_summary": summary,
         "targeted_recommendations": recommendations,
         "learning_path_steps": path_steps,
-        "progress_status": status_str
+        "progress_status": status_str,
+        "assigned_grade": assigned_grade,
+        "assigned_marks": assigned_marks,
+        "evaluator_name": evaluator_name,
+        "evaluator_role": evaluator_role,
+        "evaluation_status": eval_status,
+        "standing": standing_str,
+        "coach_feedback": coach_feedback_text,
+        "last_graded_at": last_graded_str
     }
 
 
@@ -205,27 +299,7 @@ def get_coach_students(current_user: models.User = Depends(get_current_user), db
             if p_metrics:
                 avg_score = round(sum((m.confidence_score + m.clarity_score) / 2 for m in p_metrics) / len(p_metrics), 1)
             else:
-                avg_score = 85.0 if total_sessions > 0 else 0.0
-                
-        # Calculate letter grade
-        if avg_score >= 90:
-            grade = "A+"
-        elif avg_score >= 85:
-            grade = "A"
-        elif avg_score >= 80:
-            grade = "A-"
-        elif avg_score >= 75:
-            grade = "B+"
-        elif avg_score >= 70:
-            grade = "B"
-        elif avg_score >= 60:
-            grade = "C"
-        elif avg_score > 0:
-            grade = "D"
-        else:
-            grade = "Pending"
-            
-        # Detect top logic gap
+                avg_score = 0.0
         top_gap = "None Detected"
         user_turn = db.query(models.SimulationTurn).filter(models.SimulationTurn.user_id == u.id).order_by(models.SimulationTurn.id.desc()).first()
         if user_turn and user_turn.fallacies_json:
@@ -248,18 +322,43 @@ def get_coach_students(current_user: models.User = Depends(get_current_user), db
             else:
                 top_gap = "No Sessions Yet"
                 
+        # Check if coach explicitly assigned a grade/marks in CoachingPlan
+        user_plan = db.query(models.CoachingPlan).filter(models.CoachingPlan.user_id == u.id).first()
+        if user_plan and user_plan.assigned_grade and user_plan.assigned_grade.strip().lower() != "pending":
+            grade = user_plan.assigned_grade
+            if user_plan.assigned_marks is not None:
+                avg_score = round(user_plan.assigned_marks, 1)
+        else:
+            grade = "Pending"
+
+        # Collect all sessions for this student
+        user_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == u.id).order_by(models.DebateSession.id.desc()).all()
+        sessions_list = []
+        for s_item in user_sessions:
+            s_perf = db.query(models.PerformanceScore).filter(models.PerformanceScore.session_id == s_item.id).first()
+            sessions_list.append({
+                "id": s_item.id,
+                "topic": s_item.topic,
+                "format": s_item.format,
+                "date": s_item.created_at.strftime("%Y-%m-%d %H:%M") if s_item.created_at else "Recent",
+                "coach_grade": s_perf.coach_grade if (s_perf and s_perf.coach_grade) else "Pending",
+                "coach_marks": s_perf.coach_marks if (s_perf and s_perf.coach_marks is not None) else None
+            })
+
         student_roster.append({
             "id": u.id,
             "name": u.full_name or u.email.split("@")[0],
             "email": u.email,
             "topic": latest_session.topic if latest_session else "No Active Debate",
             "format": latest_session.format if latest_session else "N/A",
+            "latest_session_id": latest_session.id if latest_session else None,
             "total_sessions": total_sessions,
             "grade": grade,
             "score": avg_score,
             "gap": top_gap,
             "experience": u.experience_level,
-            "last_active": latest_session.created_at.strftime("%Y-%m-%d %H:%M") if latest_session else u.created_at.strftime("%Y-%m-%d")
+            "last_active": latest_session.created_at.strftime("%Y-%m-%d %H:%M") if latest_session else u.created_at.strftime("%Y-%m-%d"),
+            "sessions": sessions_list
         })
         
     return student_roster
@@ -271,13 +370,28 @@ def send_coach_feedback(payload: CoachFeedbackRequest, current_user: models.User
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
         
-    # 1. Create a persistent notification for the student
     coach_name = current_user.full_name or "Debate Coach"
+
+    # Compute default marks/grade if not explicitly supplied
+    if payload.grade:
+        assigned_grade = payload.grade.strip().upper()
+    else:
+        scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == payload.student_id).all()
+        avg_score = sum(s[0] for s in scores) / len(scores) if scores else 85.0
+        assigned_grade = "A+" if avg_score >= 90 else "A" if avg_score >= 85 else "B+" if avg_score >= 75 else "B" if avg_score >= 70 else "C"
+
+    if payload.marks is not None:
+        assigned_marks = round(float(payload.marks), 1)
+    else:
+        scores = db.query(models.PerformanceScore.overall_weighted_score).filter(models.PerformanceScore.user_id == payload.student_id).all()
+        assigned_marks = round(sum(s[0] for s in scores) / len(scores), 1) if scores else 85.0
+
+    # 1. Create a persistent notification for the student
     notification = models.Notification(
         user_id=payload.student_id,
         category="Coach Feedback",
-        title=f"Coaching Recommendation from Coach {coach_name}",
-        message=payload.feedback,
+        title=f"Grade {assigned_grade} & Directive Assigned by Coach {coach_name}",
+        message=f"Official Grade: {assigned_grade} ({assigned_marks}%). Evaluator Feedback: {payload.feedback}",
         read=False
     )
     db.add(notification)
@@ -287,20 +401,92 @@ def send_coach_feedback(payload: CoachFeedbackRequest, current_user: models.User
     if plan:
         existing_recs = plan.targeted_recommendations or ""
         plan.targeted_recommendations = f"{payload.feedback}\n{existing_recs}"
+        plan.assigned_grade = assigned_grade
+        plan.assigned_marks = assigned_marks
+        plan.evaluator_name = coach_name
+        plan.evaluator_id = current_user.id
+        plan.skill_gap_summary = f"Directive from Coach {coach_name}: {payload.feedback}"
+        plan.updated_at = datetime.utcnow()
     else:
         new_plan = models.CoachingPlan(
             user_id=payload.student_id,
             skill_gap_summary=f"Feedback from Coach {coach_name}: {payload.feedback}",
             targeted_recommendations=payload.feedback,
             learning_path_steps="Coach Directed Drill (Active)",
-            progress_status="Under Active Mentorship"
+            progress_status="Under Active Mentorship",
+            assigned_grade=assigned_grade,
+            assigned_marks=assigned_marks,
+            evaluator_name=coach_name,
+            evaluator_id=current_user.id,
+            updated_at=datetime.utcnow()
         )
         db.add(new_plan)
+
+    # 3. Update the specific debate session or student's latest debate session PerformanceScore
+    target_sessions = []
+    if payload.session_id and payload.session_id > 0:
+        s_target = db.query(models.DebateSession).filter(models.DebateSession.id == payload.session_id).first()
+        if s_target:
+            target_sessions.append(s_target)
+    elif payload.session_id == -1:
+        # All sessions for this student
+        target_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == payload.student_id).all()
+    else:
+        # Latest session for this student
+        latest_s = db.query(models.DebateSession).filter(models.DebateSession.user_id == payload.student_id).order_by(models.DebateSession.id.desc()).first()
+        if latest_s:
+            target_sessions.append(latest_s)
+
+    for sess in target_sessions:
+        perf = db.query(models.PerformanceScore).filter(models.PerformanceScore.session_id == sess.id).first()
+        if not perf:
+            perf = models.PerformanceScore(
+                session_id=sess.id,
+                user_id=sess.user_id,
+                overall_weighted_score=assigned_marks,
+                logical_consistency=85.0,
+                argument_quality=85.0,
+                rebuttal_effectiveness=85.0,
+                evidence_use=85.0,
+                communication_skills=85.0,
+                ai_feedback="AI feedback archived.",
+                created_at=datetime.utcnow()
+            )
+            db.add(perf)
+        perf.coach_grade = assigned_grade
+        perf.coach_marks = assigned_marks
+        perf.coach_feedback = payload.feedback
         
     db.commit()
     
     return {
         "status": "success",
-        "message": f"Coaching recommendation successfully dispatched to {student.full_name or student.email}!"
+        "assigned_grade": assigned_grade,
+        "assigned_marks": assigned_marks,
+        "evaluator_name": coach_name,
+        "target_sessions_evaluated": len(target_sessions),
+        "message": f"Official Grade ({assigned_grade}) and coaching directive successfully dispatched to {student.full_name or student.email}!"
     }
+
+
+@router.get("/coach-grade/me", response_model=schemas.CoachGradeEvaluationResponse)
+def get_my_coach_grade(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    plan_data = get_coaching_plan(current_user.id, current_user, db)
+    total_sessions = db.query(models.DebateSession).filter(models.DebateSession.user_id == current_user.id).count()
+
+    return {
+        "user_id": current_user.id,
+        "student_name": current_user.full_name or current_user.email.split("@")[0],
+        "student_email": current_user.email,
+        "grade": plan_data.get("assigned_grade") or "Pending",
+        "marks": plan_data.get("assigned_marks"),
+        "evaluator_name": plan_data.get("evaluator_name"),
+        "evaluator_role": plan_data.get("evaluator_role"),
+        "coach_feedback": plan_data.get("coach_feedback"),
+        "evaluation_status": plan_data.get("evaluation_status") or "Pending Coach Evaluation",
+        "standing": plan_data.get("standing") or "Pending Assessment",
+        "total_sessions": total_sessions,
+        "assessed_at": plan_data.get("last_graded_at")
+    }
+
 

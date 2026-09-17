@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -53,11 +53,14 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Authentication failed.");
 
-      if (data.role !== role) {
-        throw new Error(`Access denied. Registered role is '${data.role}', not '${role}'.`);
+      if (data.role) {
+        setRole(data.role);
       }
 
       localStorage.setItem('logos_ai_jwt', data.access_token);
+      if (data.full_name) {
+        localStorage.setItem('logos_ai_user_name', data.full_name);
+      }
       setMessage({ type: 'success', text: 'Access granted! Welcome to LOGOS.AI.' });
       
       setTimeout(() => {
@@ -100,6 +103,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       if (!res.ok) throw new Error(data.detail || "Registration failed.");
 
       localStorage.setItem('logos_ai_jwt', data.access_token);
+      if (data.full_name || fullName) {
+        localStorage.setItem('logos_ai_user_name', data.full_name || fullName);
+      }
       setMessage({ type: 'success', text: 'Account created successfully! Welcome.' });
       
       setTimeout(() => {

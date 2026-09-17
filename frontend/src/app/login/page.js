@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -48,18 +48,38 @@ export default function LoginPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Authentication failed.");
+      if (!res.ok) {
+        if (res.status === 404) {
+          setMessage({
+            type: 'error',
+            text: (
+              <span>
+                Email address not registered. Please{' '}
+                <Link href={`/signup?email=${encodeURIComponent(email)}`} style={{ textDecoration: 'underline', fontWeight: 700, color: '#DC2626' }}>
+                  Sign Up Here
+                </Link>
+              </span>
+            )
+          });
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.detail || "Authentication failed.");
+      }
 
-      if (data.role !== role) {
-        throw new Error(`Access denied. Registered role is '${data.role}', not '${role}'.`);
+      if (data.role) {
+        setRole(data.role);
       }
 
       localStorage.setItem('logos_ai_jwt', data.access_token);
+      if (data.full_name) {
+        localStorage.setItem('logos_ai_user_name', data.full_name);
+      }
       setMessage({ type: 'success', text: `Access granted! Redirecting to dashboard...` });
       
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1200);
+      }, 800);
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {

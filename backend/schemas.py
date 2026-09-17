@@ -96,9 +96,10 @@ class ArgumentAnalysisResponse(BaseModel):
 
 
 class SpeechAnalysisSubmit(BaseModel):
-    session_id: Optional[int] = Field(default=None)
+    session_id: Optional[int] = None
     speech_text: str = Field(min_length=1, max_length=50000)
     audio_duration_seconds: Optional[float] = Field(default=60.0, gt=0, le=86400)
+    topic: Optional[str] = None
 
 
 class PresentationMetricResponse(BaseModel):
@@ -126,6 +127,9 @@ class SimulationTurnResponse(BaseModel):
     fallacies_detected_in_user: List[FallacyDetail]
     rebuttal_strength_percent: float
     coaching_tip: str
+    overall_score: Optional[float] = None
+    logical_score: Optional[float] = None
+    cumulative_rebuttal: Optional[float] = None
 
 
 class WeightedScoreResponse(BaseModel):
@@ -144,3 +148,27 @@ class CoachingPlanResponse(BaseModel):
     targeted_recommendations: List[str]
     learning_path_steps: List[str]
     progress_status: str
+    assigned_grade: Optional[str] = None
+    assigned_marks: Optional[float] = None
+    evaluator_name: Optional[str] = None
+    evaluator_role: Optional[str] = None
+    evaluation_status: Optional[str] = None
+    standing: Optional[str] = None
+    coach_feedback: Optional[str] = None
+    last_graded_at: Optional[str] = None
+
+
+class CoachGradeEvaluationResponse(BaseModel):
+    user_id: int
+    student_name: str
+    student_email: str
+    grade: str
+    marks: Optional[float] = None
+    evaluator_name: Optional[str] = None
+    evaluator_role: Optional[str] = None
+    coach_feedback: Optional[str] = None
+    evaluation_status: str
+    standing: str
+    total_sessions: int
+    assessed_at: Optional[str] = None
+

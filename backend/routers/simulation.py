@@ -51,6 +51,48 @@ def run_simulation_turn(
     db.add(turn)
     db.commit()
 
+    # Calculate and persist live PerformanceScore across all session turns
+    all_turns = db.query(models.SimulationTurn).filter(models.SimulationTurn.session_id == payload.session_id).all()
+    total_fallacies = 0
+    total_rebuttal = 0.0
+    for t in all_turns:
+        total_rebuttal += float(t.rebuttal_strength_percent or 0.0)
+        try:
+            fl = json.loads(t.fallacies_json) if isinstance(t.fallacies_json, str) else t.fallacies_json
+            if isinstance(fl, list):
+                total_fallacies += len(fl)
+        except Exception:
+            pass
+
+    avg_rebuttal = round(total_rebuttal / max(1, len(all_turns)), 1)
+    logical_score = max(30.0, round(100.0 - total_fallacies * 15.0, 1))
+    arg_quality = round(avg_rebuttal * 0.95, 1)
+    evidence_score = round(max(50.0, min(95.0, avg_rebuttal * 0.88 + 10.0)), 1)
+    overall_score = round(arg_quality * 0.30 + evidence_score * 0.20 + logical_score * 0.25 + avg_rebuttal * 0.25, 1)
+
+    perf = db.query(models.PerformanceScore).filter(models.PerformanceScore.session_id == payload.session_id).first()
+    if not perf:
+        perf = models.PerformanceScore(
+            session_id=payload.session_id,
+            user_id=current_user.id,
+            argument_quality=arg_quality,
+            evidence_use=evidence_score,
+            logical_consistency=logical_score,
+            rebuttal_effectiveness=avg_rebuttal,
+            communication_skills=85.0,
+            overall_weighted_score=overall_score,
+            created_at=datetime.utcnow()
+        )
+        db.add(perf)
+    else:
+        perf.argument_quality = arg_quality
+        perf.evidence_use = evidence_score
+        perf.logical_consistency = logical_score
+        perf.rebuttal_effectiveness = avg_rebuttal
+        perf.overall_weighted_score = overall_score
+
+    db.commit()
+
     # Write to MongoDB document store collection
     mongo_db = get_mongo_db()
     if mongo_db is not None:
@@ -78,4 +120,7 @@ def run_simulation_turn(
         "fallacies_detected_in_user": simulation_result["fallacies_detected"],
         "rebuttal_strength_percent": simulation_result["rebuttal_strength_percent"],
         "coaching_tip": simulation_result["coaching_tip"],
+        "overall_score": overall_score,
+        "logical_score": logical_score,
+        "cumulative_rebuttal": avg_rebuttal,
     }

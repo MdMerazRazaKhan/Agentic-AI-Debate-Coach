@@ -1,4 +1,4 @@
-﻿from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -31,7 +31,7 @@ def evaluate_presentation(
     if current_user is not None:
         if session_id is None:
             snippet = payload.speech_text.strip()
-            topic_str = (snippet[:60] + "...") if len(snippet) > 60 else snippet
+            topic_str = payload.topic.strip() if getattr(payload, "topic", None) and payload.topic.strip() else ((snippet[:60] + "...") if len(snippet) > 60 else snippet)
             new_session = models.DebateSession(
                 user_id=current_user.id,
                 title="Vocal Metrics & Speech Analysis",

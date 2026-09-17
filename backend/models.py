@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -139,6 +139,13 @@ class PerformanceScore(Base):
     rebuttal_effectiveness = Column(Float, default=0.0)
     communication_skills = Column(Float, default=0.0)
     overall_weighted_score = Column(Float, default=0.0)
+    overall_feedback = Column(Text, nullable=True)
+    logical_feedback = Column(Text, nullable=True)
+    rebuttal_feedback = Column(Text, nullable=True)
+    ai_feedback = Column(Text, nullable=True)
+    coach_grade = Column(String, nullable=True)
+    coach_marks = Column(Float, nullable=True)
+    coach_feedback = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("DebateSession", back_populates="performance_scores")
@@ -153,6 +160,10 @@ class CoachingPlan(Base):
     targeted_recommendations = Column(Text)
     learning_path_steps = Column(Text)
     progress_status = Column(String, default="In Progress")
+    assigned_grade = Column(String, nullable=True)
+    assigned_marks = Column(Float, nullable=True)
+    evaluator_name = Column(String, nullable=True)
+    evaluator_id = Column(Integer, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow)
 
 

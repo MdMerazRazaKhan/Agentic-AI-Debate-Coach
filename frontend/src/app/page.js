@@ -92,7 +92,7 @@ export default function Home() {
                 className="btn btn-dark"
                 style={{ cursor: 'pointer' }}
               >
-                START SIMULATION
+                START DEBATE SIMULATION
               </button>
               <button 
                 onClick={(e) => handleFeatureClick(e, '/dashboard')}
@@ -220,7 +220,7 @@ export default function Home() {
                     className="btn btn-red"
                     style={{ padding: '0.75rem 1.75rem', fontSize: '0.85rem' }}
                   >
-                    DEPLOY SIMULATION AGENT &rarr;
+                    DEPLOY DEBATE SIMULATION AGENT &rarr;
                   </button>
                 </div>
               </div>
@@ -294,7 +294,7 @@ export default function Home() {
             </div>
 
             <div className="module-card" style={{ cursor: 'default' }}>
-              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>SIMULATION ENGINE</h3>
+              <h3 className="module-title" style={{ marginTop: '0.5rem' }}>DEBATE SIMULATION ENGINE</h3>
               <p className="module-desc">Engage with LLM-driven opponents across five debate formats.</p>
               <div className="module-line"></div>
             </div>

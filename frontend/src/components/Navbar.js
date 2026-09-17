@@ -136,8 +136,8 @@ export default function Navbar() {
           LOGOS.AI
         </Link>
 
-        {/* Nav Links: ENGINES, SIMULATION, VOCAL_METRICS, and DASHBOARD in a red box */}
-        <div className="nav-links" style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
+        {/* Nav Links: ENGINES, DEBATE SIMULATION, PRESENTATION-ANALYSIS, etc. */}
+        <div className="nav-links" style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
           <Link 
             href="/#engines" 
             onClick={handleEnginesClick}
@@ -150,14 +150,32 @@ export default function Navbar() {
             onClick={(e) => handleProtectedNav(e, '/simulation')}
             className={`nav-link ${pathname === '/simulation' ? 'active' : ''}`}
           >
-            SIMULATION
+            DEBATE SIMULATION
           </Link>
           <Link 
-            href="/presentation" 
-            onClick={(e) => handleProtectedNav(e, '/presentation')}
-            className={`nav-link ${pathname === '/presentation' ? 'active' : ''}`}
+            href="/presentation-analysis" 
+            onClick={(e) => handleProtectedNav(e, '/presentation-analysis')}
+            className={`nav-link ${pathname === '/presentation' || pathname === '/presentation-analysis' ? 'active' : ''}`}
           >
-            VOCAL_METRICS
+            PRESENTATION-ANALYSIS
+          </Link>
+          <Link 
+            href="/argument-analysis" 
+            className={`nav-link ${pathname === '/argument-analysis' ? 'active' : ''}`}
+          >
+            ARGUMENT-ANALYSIS
+          </Link>
+          <Link 
+            href="/fallacy-detector" 
+            className={`nav-link ${pathname === '/fallacy-detector' ? 'active' : ''}`}
+          >
+            FALLACY-DETECTOR
+          </Link>
+          <Link 
+            href="/counter-argument" 
+            className={`nav-link ${pathname === '/counter-argument' ? 'active' : ''}`}
+          >
+            COUNTER-ARGUMENT
           </Link>
           <Link 
             href="/dashboard" 

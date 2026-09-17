@@ -90,9 +90,9 @@ function PerformanceDetailContent() {
           if (presTarget) {
             setPerformanceData({
               session_id: presTarget.session_id || presTarget.id,
-              title: presTarget.title || 'Vocal Metrics & Speech Analysis',
+              title: presTarget.title || 'Presentation Analysis & Speech Evaluation',
               topic: presTarget.topic || 'Speech Prosody Evaluation',
-              format: 'Vocal Matrix',
+              format: 'Presentation Analysis',
               position: 'Speaker',
               status: 'Completed',
               date: presTarget.date || 'Recent',
@@ -332,10 +332,10 @@ function PerformanceDetailContent() {
           <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '2rem', marginBottom: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
               <span style={{ background: '#FEE2E2', color: '#D90429', fontSize: '0.72rem', fontWeight: 800, padding: '0.25rem 0.6rem', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                VOCAL MATRIX PROSODY AUDIT
+                PRESENTATION ANALYSIS PROSODY AUDIT
               </span>
               <span style={{ background: '#F3F4F6', color: '#374151', fontSize: '0.72rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '6px' }}>
-                Vocal Matrix
+                Presentation Analysis
               </span>
               <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.72rem', fontWeight: 700, padding: '0.25rem 0.6rem', borderRadius: '6px' }}>
                 Acoustic Cadence Analysis
@@ -439,7 +439,7 @@ function PerformanceDetailContent() {
                   REPORTS &amp; PERFORMANCE CERTIFICATES
                 </h3>
                 <p style={{ fontSize: '0.84rem', color: '#6B7280', margin: 0, lineHeight: '1.5' }}>
-                  Access full tamper-resistant assessment documents, speech prosody audits, and compliance export files for this vocal matrix session.
+                  Access full tamper-resistant assessment documents, speech prosody audits, and compliance export files for this presentation analysis session.
                 </p>
               </div>
 

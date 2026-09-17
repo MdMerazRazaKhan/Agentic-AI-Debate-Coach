@@ -185,6 +185,92 @@ def get_coaching_plan(user_id: int, current_user: models.User = Depends(get_curr
         last_graded_str = None
         coach_feedback_text = "Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here."
 
+    # 5. Build structured Debate Recommendations, Presentation Suggestions, and Skill Development Plans
+    avg_wpm_val = round(sum(m.speech_pace_wpm for m in p_metrics) / len(p_metrics), 1) if p_metrics else 142.0
+    avg_fillers_val = round(sum(m.filler_words_count for m in p_metrics) / len(p_metrics), 1) if p_metrics else 2.5
+    avg_clarity_val = round(sum(m.clarity_score for m in p_metrics) / len(p_metrics), 1) if p_metrics else 88.0
+
+    debate_recs = [
+        {
+            "id": "deb-1",
+            "title": "Logical Rebuttal Structuring",
+            "category": "Debate Strategy",
+            "priority": "High" if (scores and any(s.logical_consistency < 75 for s in scores)) else "Medium",
+            "description": "Formulate 3-tier rebuttals (Claim, Evidence, Warrant) to preempt counterattacks effectively.",
+            "drill": "Practice with Toulmin Refutation Drills in Debate Simulation"
+        },
+        {
+            "id": "deb-2",
+            "title": "Fallacy Shielding & Preemption",
+            "category": "Argument Analysis",
+            "priority": "High",
+            "description": "Identify and counteract subtle Straw Man and Red Herring pivots prior to speech conclusion.",
+            "drill": "Complete 5 Fallacy Detection audit sessions"
+        },
+        {
+            "id": "deb-3",
+            "title": "Cross-Examination Assertiveness",
+            "category": "Debate Tactics",
+            "priority": "Medium",
+            "description": "Maintain tactical control during cross-examination by answering concisely without conceding key arguments.",
+            "drill": "Run Socratic Cross-examination drill against Aggressive Challenger"
+        }
+    ]
+
+    presentation_suggs = [
+        {
+            "id": "pres-1",
+            "aspect": "Speaking Pace & Cadence",
+            "current_stat": f"{avg_wpm_val} WPM",
+            "target_stat": "130 - 155 WPM",
+            "status": "Optimal" if 125 <= avg_wpm_val <= 160 else "Needs Moderation",
+            "suggestion": "Moderate cadence during statistical citations to maximize audience retention." if avg_wpm_val > 155 else "Pacing is well-controlled. Maintain steady cadence across complex points."
+        },
+        {
+            "id": "pres-2",
+            "aspect": "Filler Word Mitigation",
+            "current_stat": f"{avg_fillers_val} per speech",
+            "target_stat": "< 2 per speech",
+            "status": "Optimal" if avg_fillers_val <= 2 else "Needs Attention",
+            "suggestion": "Replace verbal hesitations ('um', 'ah', 'like') with purposeful 1.5-second pauses."
+        },
+        {
+            "id": "pres-3",
+            "aspect": "Vocal Clarity & Projection",
+            "current_stat": f"{avg_clarity_val}%",
+            "target_stat": "> 85%",
+            "status": "Optimal" if avg_clarity_val >= 85 else "Needs Attention",
+            "suggestion": "Emphasize pivotal transition phrases to maximize audience engagement and clarity."
+        }
+    ]
+
+    skill_plans = [
+        {
+            "skill": "Argument Structure & Toulmin Framing",
+            "level": "Proficient" if computed_avg >= 80 else "Intermediate",
+            "progress": min(100, max(20, int(computed_avg if computed_avg > 0 else 75))),
+            "focus_areas": ["Data warranting", "Rebuttal preemption", "Impact framing"]
+        },
+        {
+            "skill": "Vocal Delivery & Delivery Dynamics",
+            "level": "Advanced" if (p_metrics and avg_fillers_val < 3) else "Intermediate",
+            "progress": min(100, max(25, int(avg_clarity_val if p_metrics else 82))),
+            "focus_areas": ["Pacing control", "Pause placement", "Intonation modulation"]
+        },
+        {
+            "skill": "Logical Fallacy Resilience",
+            "level": "Proficient",
+            "progress": 85 if computed_avg >= 80 else 70,
+            "focus_areas": ["Circular reasoning detection", "Straw man refutation", "Ad hominem redirection"]
+        },
+        {
+            "skill": "Cross-Examination & Rebuttal Speed",
+            "level": "Intermediate",
+            "progress": 72,
+            "focus_areas": ["Direct answer brevity", "Counter-question framing", "Closing synthesis"]
+        }
+    ]
+
     return {
         "user_id": user_id,
         "skill_gap_summary": summary,
@@ -198,7 +284,10 @@ def get_coaching_plan(user_id: int, current_user: models.User = Depends(get_curr
         "evaluation_status": eval_status,
         "standing": standing_str,
         "coach_feedback": coach_feedback_text,
-        "last_graded_at": last_graded_str
+        "last_graded_at": last_graded_str,
+        "debate_recommendations": debate_recs,
+        "presentation_suggestions": presentation_suggs,
+        "skill_development_plans": skill_plans
     }
 
 

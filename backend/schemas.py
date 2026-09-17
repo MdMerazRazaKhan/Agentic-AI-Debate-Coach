@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -105,11 +105,18 @@ class SpeechAnalysisSubmit(BaseModel):
 class PresentationMetricResponse(BaseModel):
     session_id: Optional[int] = None
     speech_pace_wpm: float
+    pace_status: Optional[str] = "slow"
     filler_words_count: int
     filler_words_list: str
     confidence_score: float
     clarity_score: float
     engagement_score: float
+    confidence_score_10: Optional[float] = None
+    clarity_score_10: Optional[float] = None
+    engagement_score_10: Optional[float] = None
+    strengths: Optional[List[str]] = None
+    improvements: Optional[List[str]] = None
+    summary: Optional[str] = None
 
 
 class SimulationTurnSubmit(BaseModel):
@@ -156,6 +163,9 @@ class CoachingPlanResponse(BaseModel):
     standing: Optional[str] = None
     coach_feedback: Optional[str] = None
     last_graded_at: Optional[str] = None
+    debate_recommendations: Optional[List[Dict[str, Any]]] = None
+    presentation_suggestions: Optional[List[Dict[str, Any]]] = None
+    skill_development_plans: Optional[List[Dict[str, Any]]] = None
 
 
 class CoachGradeEvaluationResponse(BaseModel):

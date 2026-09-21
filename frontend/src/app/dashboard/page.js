@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const [hoveredTrend, setHoveredTrend] = useState(null);
   const [selectedTrend, setSelectedTrend] = useState(null);
   const [trendFilter, setTrendFilter] = useState('all'); // 'all', 'last30', 'last15', 'last10'
-  const [trendCategory, setTrendCategory] = useState('debate'); // 'debate', 'presentation', 'argument', 'policy', 'counter'
+  const [trendCategory, setTrendCategory] = useState('debate'); // 'debate', 'presentation', 'argument', 'fallacy', 'counter'
   const trendScrollRef = useRef(null);
   const [userRole, setUserRole] = useState('Learner');
   const [userName, setUserName] = useState('');
@@ -48,6 +48,8 @@ export default function DashboardPage() {
   // Persistent Datasets fetched directly from Backend
   const [debateHistory, setDebateHistory] = useState([]);
   const [presentationHistory, setPresentationHistory] = useState([]);
+  const [selectedPresId, setSelectedPresId] = useState(null);
+  const [selectedScoreSession, setSelectedScoreSession] = useState(null);
 
   // Learner Coach Evaluation States (Grade & Marks given by Debate Coach)
   const [coachGradeData, setCoachGradeData] = useState({
@@ -195,9 +197,9 @@ export default function DashboardPage() {
 
     const role = payload.role || 'Learner';
     setUserRole(role);
-    const rLower = role.toLowerCase();
-    if (rLower.includes('coach') || rLower.includes('educator') || rLower.includes('admin')) {
-      setActiveTab('overview');
+    const initialTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    if (initialTab && ['debates', 'presentations', 'coaching', 'trends', 'settings'].includes(initialTab)) {
+      setActiveTab(initialTab);
     } else {
       setActiveTab('debates');
     }
@@ -214,6 +216,28 @@ export default function DashboardPage() {
     }
     
     fetchAllData(savedToken);
+  }, []);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    if (typeof window !== 'undefined') {
+      const newUrl = `${window.location.pathname}?tab=${tabId}`;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkUrlTab = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam && ['debates', 'presentations', 'coaching', 'trends', 'settings'].includes(tabParam)) {
+          setActiveTab(tabParam);
+        }
+      };
+      window.addEventListener('popstate', checkUrlTab);
+      return () => window.removeEventListener('popstate', checkUrlTab);
+    }
   }, []);
 
   const fetchAllData = async (token) => {
@@ -355,13 +379,19 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/sessions/history", {
+      const res = await fetch("http://localhost:8000/api/v1/sessions/history?session_type=debate", {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setDebateHistory(data);
+          const debateOnly = data.filter(d => {
+            const fmt = (d.format || '').toLowerCase();
+            const st = (d.session_type || '').toLowerCase();
+            return !fmt.includes('vocal') && !fmt.includes('presentation') && !fmt.includes('speech') &&
+                   !st.includes('vocal') && !st.includes('presentation') && !st.includes('speech');
+          });
+          setDebateHistory(debateOnly);
         }
       }
     } catch (err) {
@@ -380,6 +410,9 @@ export default function DashboardPage() {
         const data = await res.json();
         if (Array.isArray(data)) {
           setPresentationHistory(data);
+          if (data.length > 0) {
+            setSelectedPresId(prev => prev || data[0].id);
+          }
         }
       }
     } catch (err) {
@@ -561,34 +594,34 @@ export default function DashboardPage() {
     });
   }, [debateHistory]);
 
-  // 4. Policy Debate Improvement Trend Data
-  const policyTrendData = useMemo(() => {
-    const policySessions = debateHistory.filter(d => (d.topic || '').toLowerCase().includes('policy') || (d.format || '').toLowerCase().includes('policy'));
-    const items = policySessions.length > 0 ? policySessions : [
-      { id: 'pol-b1', topic: 'State Healthcare Infrastructure Mandates', score: 69, format: 'Policy Feasibility Analysis', date: '2026-09-02' },
-      { id: 'pol-b2', topic: 'Carbon Dividend & Cap-and-Trade Solvency', score: 76, format: 'Fiscal Cost-Benefit Model', date: '2026-09-08' },
-      { id: 'pol-b3', topic: 'Federal AI Compute Infrastructure Subsidies', score: 83, format: 'Stakeholder Impact Assessment', date: '2026-09-13' },
-      { id: 'pol-b4', topic: 'Universal Telecommunications Governance Plan', score: 86, format: 'Solvency & Enforcement Audit', date: '2026-09-16' },
-      { id: 'pol-b5', topic: 'Multilateral Cyber Defense Treaty Protocols', score: 92, format: 'International Policy Accord', date: '2026-09-17' },
+  // 4. Logical Fallacy Detection Improvement Trend Data
+  const fallacyTrendData = useMemo(() => {
+    const fallacySessions = debateHistory.filter(d => (d.topic || '').toLowerCase().includes('fallacy') || (d.format || '').toLowerCase().includes('fallacy') || d.logical_consistency !== undefined);
+    const items = fallacySessions.length > 0 ? fallacySessions : [
+      { id: 'fal-b1', topic: 'Ad Hominem Defense in Electoral Debates', score: 72, format: 'Ad Hominem Detection Audit', date: '2026-09-02' },
+      { id: 'fal-b2', topic: 'Straw Man Refutation in Environmental Policy', score: 79, format: 'Straw Man Fallacy Audit', date: '2026-09-06' },
+      { id: 'fal-b3', topic: 'False Dilemma & Slippery Slope Neutralization', score: 84, format: 'Dilemma & Slope Shielding', date: '2026-09-11' },
+      { id: 'fal-b4', topic: 'Appeal to Authority & Circular Reasoning Audit', score: 88, format: 'Epistemic Warrant Verification', date: '2026-09-15' },
+      { id: 'fal-b5', topic: 'Red Herring & Hasty Generalization Elimination', score: 94, format: 'Master Fallacy Insulation', date: '2026-09-17' },
     ];
     let runSum = 0;
-    return items.map((p, index) => {
+    return items.map((f, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(p.overall_score ?? p.score ?? 80);
+      const scoreVal = parseFloat(f.logical_consistency ?? f.score ?? f.overall_score ?? 82);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? items[index - 1].score ?? 80) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].logical_consistency ?? items[index - 1].score ?? items[index - 1].overall_score ?? 82) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
-        id: p.id,
-        topic: p.topic || p.title,
-        format: p.format || 'Policy Rebuttal Audit',
+        id: f.id,
+        topic: f.topic || f.title,
+        format: f.format || 'Logical Fallacy Detection Audit',
         score: scoreVal,
         meanPercentage: meanPercentage,
         delta: delta,
-        date: p.date || p.created_at || 'Recent',
-        category: 'Policy Debate'
+        date: f.date || f.created_at || 'Recent',
+        category: 'Fallacy Detection Engine'
       };
     });
   }, [debateHistory]);
@@ -630,7 +663,7 @@ export default function DashboardPage() {
     switch (trendCategory) {
       case 'presentation': return presentationTrendData;
       case 'argument': return argumentTrendData;
-      case 'policy': return policyTrendData;
+      case 'fallacy': return fallacyTrendData;
       case 'counter': return counterTrendData;
       case 'debate':
       default: return debateTrendData;
@@ -660,7 +693,7 @@ export default function DashboardPage() {
       color: "#D90429",
       gradientId: "scoreAreaGradientDebate",
       scoreLabel: "Round Overall Score (%)",
-      roundPrefix: "ROUND",
+      roundPrefix: "Round",
       axisGuideName: "Practice Rounds",
       axisGuideDesc: "Represents each completed debate round in chronological sequence. Evaluates dialectical flow, Toulmin structuring, and refutation mastery."
     },
@@ -672,7 +705,7 @@ export default function DashboardPage() {
       color: "#7C3AED",
       gradientId: "scoreAreaGradientPres",
       scoreLabel: "Speech Delivery Score (%)",
-      roundPrefix: "SPEECH",
+      roundPrefix: "Speech",
       axisGuideName: "Speech Sessions",
       axisGuideDesc: "Tracks presentation audits measuring speaking pace stability (optimal 130-155 WPM), verbal filler mitigation, and vocal confidence."
     },
@@ -684,21 +717,21 @@ export default function DashboardPage() {
       color: "#2563EB",
       gradientId: "scoreAreaGradientArg",
       scoreLabel: "Argument Validity Score (%)",
-      roundPrefix: "AUDIT",
+      roundPrefix: "Audit",
       axisGuideName: "Argument Audits",
       axisGuideDesc: "Measures deductive structure, evidence warranting density, premise linkages, and resilience against adversarial refutations."
     },
-    policy: {
-      name: "Policy Rebuttals",
-      title: "Policy Debate Solvency & Feasibility Graph",
-      subtitle: "Tracking solvency efficacy, fiscal feasibility, stakeholder impact analysis, and comparative policy leverage.",
-      badge: "POLICY REBUTTALS TRAJECTORY",
+    fallacy: {
+      name: "Fallacy Detection Engine",
+      title: "Logical Fallacy Immunity & Soundness Graph",
+      subtitle: "Tracking fallacy identification, reasoning analysis, epistemic credibility, and dialectic bias resistance.",
+      badge: "FALLACY DETECTOR TRAJECTORY",
       color: "#059669",
-      gradientId: "scoreAreaGradientPol",
-      scoreLabel: "Policy Solvency Score (%)",
-      roundPrefix: "POLICY",
-      axisGuideName: "Policy Motions",
-      axisGuideDesc: "Measures systemic feasibility benchmarks, fiscal cost-benefit solvency, comparative advantage ratios, and policy implementation viability."
+      gradientId: "scoreAreaGradientFal",
+      scoreLabel: "Fallacy Immunity Score (%)",
+      roundPrefix: "Audit",
+      axisGuideName: "Fallacy Audits",
+      axisGuideDesc: "Measures detection accuracy and dialectic insulation against Ad Hominem, Straw Man, False Dilemma, Slippery Slope, Circular Reasoning, and Red Herring fallacies."
     },
     counter: {
       name: "Counterargument Engine",
@@ -708,7 +741,7 @@ export default function DashboardPage() {
       color: "#EA580C",
       gradientId: "scoreAreaGradientCnt",
       scoreLabel: "Rebuttal Leverage Score (%)",
-      roundPrefix: "DRILL",
+      roundPrefix: "Drill",
       axisGuideName: "Rebuttal Drills",
       axisGuideDesc: "Measures counterpoint sharpness across Logical, Evidence-Based, Ethical, Practical, and Policy refutation axes."
     }
@@ -746,6 +779,10 @@ export default function DashboardPage() {
     : 0;
 
   const latestVocal = presentationHistory[0] || (debateHistory.find(d => d.session_type === 'Vocal Matrix' || d.session_type === 'Presentation Analysis')?.metrics ? debateHistory.find(d => d.session_type === 'Vocal Matrix' || d.session_type === 'Presentation Analysis') : null);
+  const activePres = useMemo(() => {
+    if (!presentationHistory || presentationHistory.length === 0) return null;
+    return presentationHistory.find(p => p.id === selectedPresId) || presentationHistory[0];
+  }, [presentationHistory, selectedPresId]);
   const latestDebate = debateHistory.find(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis') || debateHistory[0] || null;
 
   const currentPace = latestVocal ? `${latestVocal.wpm} WPM` : (latestDebate?.metrics?.wpm ? `${latestDebate.metrics.wpm} WPM` : (hasSessions ? '142 WPM' : '0 WPM (Pending)'));
@@ -1008,8 +1045,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Right side: Squircle Avatar & Logout Controls */}
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {/* Right side: Logout Control */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           {/* Quick Direct Logout Button */}
           <button
             type="button"
@@ -1019,15 +1056,15 @@ export default function DashboardPage() {
               background: '#FFFFFF',
               color: '#DC2626',
               border: '1.5px solid #FCA5A5',
-              padding: '0.6rem 1.15rem',
+              padding: '0.65rem 1.35rem',
               borderRadius: '8px',
-              fontSize: '0.8rem',
+              fontSize: '0.82rem',
               fontWeight: 800,
               letterSpacing: '0.05em',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
+              gap: '0.5rem',
               boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
               transition: 'all 0.18s ease'
             }}
@@ -1040,136 +1077,27 @@ export default function DashboardPage() {
             </svg>
             LOGOUT
           </button>
-
-          {/* User Initial Squircle Avatar (Curved edges, smooth corners, D / M initial) */}
-          <div
-            tabIndex={0}
-            role="button"
-            aria-label="User Profile and Logout Menu"
-            onClick={() => setShowUserMenu(!showUserMenu)}
-            className="dash-squircle-avatar"
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '11px',
-              background: '#111827',
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.35rem',
-              fontWeight: 900,
-              fontFamily: "'Inter', sans-serif",
-              cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-              border: showUserMenu ? '2px solid #000000' : '2px solid #1F2937',
-              transition: 'all 0.2s ease',
-              userSelect: 'none'
-            }}
-            title={`User Profile: ${userName || fullName || 'User'} (Click for Options)`}
-          >
-            {userInitial}
-          </div>
-
-          {/* Dropdown Popover on Avatar Click */}
-          {showUserMenu && (
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '56px',
-                width: '280px',
-                background: '#FFFFFF',
-                border: '2px solid #000000',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                boxShadow: '0 14px 35px rgba(0,0,0,0.18)',
-                zIndex: 9999
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1rem', borderBottom: '1px solid #E5E7EB', paddingBottom: '0.85rem' }}>
-                <div style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '10px',
-                  background: '#111827',
-                  color: '#FFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.25rem',
-                  fontWeight: 900
-                }}>
-                  {userInitial}
-                </div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#111827', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {userName || fullName || 'User'}
-                  </div>
-                  <div style={{ fontSize: '0.78rem', color: '#6B7280', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                    {userEmail}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '1.2rem', background: '#F9FAFB', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #E5E7EB' }}>
-                <div style={{ fontSize: '0.72rem', color: '#6B7280', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Role</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#111827' }}>{userRole}</div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="dash-action-btn"
-                style={{
-                  width: '100%',
-                  padding: '0.7rem 1rem',
-                  background: '#D90429',
-                  color: '#FFFFFF',
-                  border: '2px solid #D90429',
-                  borderRadius: '8px',
-                  fontSize: '0.85rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                  <polyline points="16 17 21 12 16 7"></polyline>
-                  <line x1="21" y1="12" x2="9" y2="12"></line>
-                </svg>
-                LOGOUT OF LOGOS.AI
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Unified Tab Select Bar */}
       <div style={{ display: 'flex', gap: '0.5rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', padding: '6px', marginBottom: '2.5rem', overflowX: 'auto', whiteSpace: 'nowrap', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
         {(isLearner ? [
-          { id: 'overview', label: 'OVERVIEW & SUMMARY' },
           { id: 'debates', label: `DEBATE HISTORY (${totalDebates})` },
           { id: 'presentations', label: `PRESENTATION ANALYSIS (${totalVocalSessions})` },
-          { id: 'coaching', label: 'RECOMMENDATION & COACHING ENGINE' },
-          { id: 'trends', label: 'IMPROVEMENT TRENDS' },
+          { id: 'coaching', label: 'RECOMMENDATION' },
+          { id: 'trends', label: 'IMPROVEMENT' },
           { id: 'settings', label: 'PROFILE SETTINGS' }
         ] : [
-          { id: 'overview', label: 'OVERVIEW & SUMMARY' },
           { id: 'debates', label: `DEBATE HISTORY (${totalDebates})` },
           { id: 'presentations', label: `PRESENTATION ANALYSIS ARCHIVE (${totalVocalSessions})` },
-          { id: 'coaching', label: 'RECOMMENDATION & COACHING ENGINE' },
-          { id: 'trends', label: 'IMPROVEMENT TRENDS' },
+          { id: 'coaching', label: 'RECOMMENDATION' },
+          { id: 'trends', label: 'IMPROVEMENT' },
           { id: 'settings', label: 'PROFILE SETTINGS' }
         ]).map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             className="dash-action-btn"
             style={{
               padding: '0.75rem 1.5rem',
@@ -1187,823 +1115,6 @@ export default function DashboardPage() {
           </button>
         ))}
       </div>
-
-      {/* ========================================================================= */}
-      {/* 1. OVERVIEW TAB: ROLE-SPECIFIC DASHBOARD OVERVIEW */}
-      {/* ========================================================================= */}
-      {activeTab === 'overview' && (
-        <div>
-          {/* A. LEARNER OVERVIEW */}
-          {isLearner && (() => {
-            const isGradeAssigned = Boolean(
-              coachGradeData && 
-              coachGradeData.grade && 
-              coachGradeData.grade !== 'Pending' && 
-              coachGradeData.grade.trim() !== '' && 
-              coachGradeData.evaluator_name && 
-              coachGradeData.evaluator_name.trim() !== ''
-            );
-
-            return (
-            <div>
-              {/* Quick statistics cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1.25rem', marginBottom: '2.5rem' }}>
-                <div style={{ padding: '1.5rem', background: '#FFF', border: '1px solid #111827', borderRadius: '12px', position: 'relative', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
-                    COACH ASSIGNED GRADE
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                    <div className="font-display" style={{ 
-                      fontSize: '2.4rem', 
-                      fontWeight: 900,
-                      color: isGradeAssigned 
-                        ? (coachGradeData.grade.startsWith('A') ? '#059669' : coachGradeData.grade.startsWith('B') ? '#2563EB' : '#D90429') 
-                        : '#9CA3AF',
-                      lineHeight: 1
-                    }}>
-                      {isGradeAssigned ? coachGradeData.grade : 'Pending'}
-                    </div>
-                    {isGradeAssigned && (
-                      <span style={{
-                        fontSize: '0.68rem',
-                        fontWeight: 700,
-                        padding: '0.15rem 0.4rem',
-                        borderRadius: '6px',
-                        background: coachGradeData.grade.startsWith('A') ? '#ECFDF5' : coachGradeData.grade.startsWith('B') ? '#EFF6FF' : '#FEF2F2',
-                        color: coachGradeData.grade.startsWith('A') ? '#059669' : coachGradeData.grade.startsWith('B') ? '#2563EB' : '#DC2626'
-                      }}>
-                        {coachGradeData.grade.startsWith('A') ? 'HONOR ROLL' : coachGradeData.grade.startsWith('B') ? 'COMPETENT' : 'EVALUATED'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-mono" style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '0.4rem' }}>
-                    {isGradeAssigned && coachGradeData.evaluator_name ? `BY ${coachGradeData.evaluator_name.toUpperCase()}` : 'AWAITING COACH REVIEW'}
-                  </div>
-                </div>
-
-                <div style={{ padding: '1.5rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>
-                    EVALUATOR MARKS
-                  </div>
-                  <div className="font-display" style={{ 
-                    fontSize: '2.4rem', 
-                    fontWeight: 900, 
-                    lineHeight: 1,
-                    color: isGradeAssigned ? 'var(--accent-red)' : '#9CA3AF'
-                  }}>
-                    {isGradeAssigned && coachGradeData.marks !== null && coachGradeData.marks !== undefined 
-                      ? `${coachGradeData.marks}%` 
-                      : 'Pending'}
-                  </div>
-                  <div className="font-mono" style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '0.4rem' }}>
-                    {isGradeAssigned ? (coachGradeData.evaluation_status ? coachGradeData.evaluation_status.toUpperCase() : 'OFFICIAL COACH MARKS') : 'PENDING COACH ASSESSMENT'}
-                  </div>
-                </div>
-
-                <div style={{ padding: '1.5rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>DEBATES COMPLETED</div>
-                  <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, lineHeight: 1 }}>{totalDebates}</div>
-                  <div className="font-mono" style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '0.4rem' }}>RECORDED SIMULATIONS</div>
-                </div>
-
-                <div style={{ padding: '1.5rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>PRESENTATION ANALYSIS SESSIONS</div>
-                  <div className="font-display text-red" style={{ fontSize: '2.4rem', fontWeight: 900, lineHeight: 1 }}>{totalVocalSessions}</div>
-                  <div className="font-mono" style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '0.4rem' }}>PROSODY & CLARITY AUDITS</div>
-                </div>
-
-                <div style={{ padding: '1.5rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', letterSpacing: '0.05em' }}>LATEST SPEAKING PACE</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900, lineHeight: 1 }}>{currentPace}</div>
-                  <div className="font-mono" style={{ fontSize: '0.68rem', color: '#6B7280', marginTop: '0.4rem' }}>TARGET: 130-160 WPM</div>
-                </div>
-              </div>
-
-              {/* 3 Most Recent Entries Summary Card */}
-              <div style={{ background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '14px', padding: '2rem', marginBottom: '2.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-                  <div>
-                    <h3 className="font-display" style={{ fontSize: '1.35rem', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>
-                      Recent Completed Sessions (Latest 3)
-                    </h3>
-                    <p style={{ fontSize: '0.8rem', color: '#6B7280', margin: '0.2rem 0 0' }}>
-                      Summary of your most recent debate and presentation analysis practice sessions saved in the database.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab(totalDebates > 0 ? 'debates' : 'presentations')}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--accent-red)',
-                      fontWeight: 700,
-                      fontSize: '0.825rem',
-                      fontFamily: 'var(--font-mono)',
-                      cursor: 'pointer',
-                      textDecoration: 'underline'
-                    }}
-                  >
-                    VIEW FULL HISTORY ({unifiedRecentSessions.length} SESSIONS) →
-                  </button>
-                </div>
-
-                {top3Recent.length > 0 ? (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
-                          <th style={{ padding: '0.75rem 1rem' }}>Session Topic / Title</th>
-                          <th style={{ padding: '0.75rem 1rem' }}>Format / Type</th>
-                          <th style={{ padding: '0.75rem 1rem' }}>Performance Score</th>
-                          <th style={{ padding: '0.75rem 1rem' }}>Date Completed</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {top3Recent.map((s) => (
-                          <tr key={s.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                            <td style={{ padding: '1rem', fontWeight: 600 }}>{s.topic || s.title}</td>
-                            <td style={{ padding: '1rem' }}>
-                              <span style={{
-                                padding: '0.2rem 0.6rem',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem',
-                                fontWeight: 700,
-                                background: (s.type === 'Presentation Analysis' || s.type === 'Vocal Matrix') ? '#FEF2F2' : '#F0FDF4',
-                                color: (s.type === 'Presentation Analysis' || s.type === 'Vocal Matrix') ? '#DC2626' : '#166534',
-                                border: `1px solid ${(s.type === 'Presentation Analysis' || s.type === 'Vocal Matrix') ? '#FECACA' : '#BBF7D0'}`
-                              }}>
-                                {s.format}
-                              </span>
-                            </td>
-                            <td style={{ padding: '1rem', fontWeight: 700, color: 'var(--accent-red)' }}>
-                              {s.score}%
-                            </td>
-                            <td style={{ padding: '1rem', color: '#6B7280' }}>{s.date}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF', background: '#FAFAFC', border: '1px dashed #E5E7EB' }}>
-                    No completed sessions found yet. Start a simulation or record in the Presentation Analysis studio to see your metrics!
-                  </div>
-                )}
-              </div>
-
-              {/* Main Content Layout */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2.5rem' }}>
-                {/* Left Side: Skill matrix */}
-                <div style={{ background: '#FFF', padding: '2rem', borderRadius: '14px', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <div>
-                      <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>Rhetorical Skill Matrix</h3>
-                      <div className="font-mono" style={{ fontSize: '0.72rem', color: hasSessions ? '#059669' : '#6B7280', marginTop: '0.35rem', lineHeight: '1.4', wordBreak: 'break-word' }}>
-                        {hasSessions ? `● LIVE SYNC: ${latestSessionSource}` : '○ BASELINE: COMPLETE A SIMULATION OR VOCAL SESSION'}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    {skillsMatrix.map((skill, i) => (
-                      <div key={i}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                          <span style={{ color: '#111827' }}>{skill.name}</span>
-                          <span style={{ color: skill.value > 0 ? skill.color : '#9CA3AF' }}>
-                            {skill.value > 0 ? `${skill.value}%` : 'Unassessed (0%)'}
-                          </span>
-                        </div>
-                        {/* Bar */}
-                        <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${skill.value}%`, height: '100%', background: skill.color, borderRadius: '4px', transition: 'width 1s ease-in-out' }}></div>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.35rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: '1.4' }}>{skill.description}</p>
-                          <span style={{ fontSize: '0.68rem', color: '#6B7280', fontStyle: 'italic', fontFamily: 'var(--font-mono)' }}>{skill.source}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right Side: Coaching Engine Insights & Suggestions */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* Official Debate Coach Evaluation Card */}
-                  <div style={{ background: '#FFF', border: '2px solid #111827', padding: '1.75rem 2rem', borderRadius: '14px', position: 'relative', boxShadow: '0 4px 16px rgba(0,0,0,0.03)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #F3F4F6', paddingBottom: '0.75rem' }}>
-                      <div>
-                        <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.05em' }}>
-                          OFFICIAL EVALUATION AUDIT
-                        </div>
-                        <h4 className="font-display" style={{ fontSize: '1.2rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0 0' }}>
-                          Debate Coach Standing
-                        </h4>
-                      </div>
-                      <span style={{
-                        padding: '0.25rem 0.6rem',
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        borderRadius: '6px',
-                        background: isGradeAssigned ? '#ECFDF5' : '#FEF2F2',
-                        color: isGradeAssigned ? '#059669' : '#DC2626',
-                        border: `1px solid ${isGradeAssigned ? '#A7F3D0' : '#FECACA'}`
-                      }}>
-                        {isGradeAssigned ? '● ASSIGNED BY DEBATE COACH' : '○ PENDING COACH ASSESSMENT'}
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '1rem', marginBottom: '1.25rem', background: '#F9FAFB', padding: '1.25rem', border: '1px solid #E5E7EB', borderRadius: '10px' }}>
-                      <div>
-                        <div className="font-mono text-muted" style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                          OFFICIAL GRADE
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.4rem', marginTop: '0.25rem' }}>
-                          <span className="font-display" style={{ 
-                            fontSize: '2.5rem', 
-                            fontWeight: 900, 
-                            color: isGradeAssigned 
-                              ? (coachGradeData.grade.startsWith('A') ? '#059669' : coachGradeData.grade.startsWith('B') ? '#2563EB' : '#D90429') 
-                              : '#9CA3AF',
-                            lineHeight: 1
-                          }}>
-                            {isGradeAssigned ? coachGradeData.grade : 'Pending'}
-                          </span>
-                        </div>
-                        <div className="font-mono" style={{ fontSize: '0.7rem', color: '#6B7280', marginTop: '0.35rem' }}>
-                          {isGradeAssigned ? coachGradeData.standing : 'Pending Assessment'}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="font-mono text-muted" style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase' }}>
-                          EVALUATOR MARKS
-                        </div>
-                        <div className="font-display" style={{ 
-                          fontSize: '2.5rem', 
-                          fontWeight: 900, 
-                          lineHeight: 1, 
-                          marginTop: '0.25rem',
-                          color: isGradeAssigned ? 'var(--accent-red)' : '#9CA3AF'
-                        }}>
-                          {isGradeAssigned && coachGradeData.marks !== null && coachGradeData.marks !== undefined 
-                            ? `${coachGradeData.marks}%` 
-                            : 'Pending'}
-                        </div>
-                        <div className="font-mono" style={{ fontSize: '0.7rem', color: '#6B7280', marginTop: '0.35rem' }}>
-                          Assigned by: <strong>{isGradeAssigned && coachGradeData.evaluator_name ? coachGradeData.evaluator_name : 'Awaiting Coach Review'}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ borderLeft: '3px solid var(--accent-red)', paddingLeft: '1rem' }}>
-                      <div className="font-mono text-muted" style={{ fontSize: '0.7rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                        {isGradeAssigned && coachGradeData.evaluator_name 
-                          ? `LATEST DIRECTIVE FROM ${coachGradeData.evaluator_name.toUpperCase()}` 
-                          : 'AWAITING INSTRUCTOR DIRECTIVE'}
-                      </div>
-                      <p style={{ fontSize: '0.84rem', color: '#374151', lineHeight: '1.45', margin: 0, fontStyle: 'italic' }}>
-                        "{isGradeAssigned && coachGradeData.coach_feedback 
-                          ? coachGradeData.coach_feedback 
-                          : 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.'}"
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Coaching Plan Summary */}
-                  <div style={{ background: '#111827', color: '#FFF', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
-                    <div className="font-mono text-red" style={{ fontSize: '0.75rem', marginBottom: '0.5rem' }}>COACHING ENGINE INSIGHTS</div>
-                    <h3 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Active Plan: {progressStatus}</h3>
-                    <p style={{ fontSize: '0.88rem', color: '#ccc', lineHeight: '1.5', marginBottom: '1.5rem' }}>{skillGapSummary}</p>
-                    
-                    <div className="font-mono text-red" style={{ fontSize: '0.72rem', marginBottom: '0.5rem' }}>ACTIVE LEARNING STEP</div>
-                    <div style={{ fontSize: '0.9rem', color: '#FFF', fontWeight: 600 }}>{pathSteps[0] || 'Module: Speech Cadence (Active)'}</div>
-                  </div>
-
-                  {/* Recommendations Exercise list */}
-                  <div style={{ background: '#FFF', padding: '2rem', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                    <h4 className="font-display" style={{ fontSize: '1.1rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Recommended Practice drills</h4>
-                    <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.88rem', color: '#4B5563', lineHeight: '1.4' }}>
-                      {recommendations.map((rec, i) => (
-                        <li key={i}>{rec}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-            );
-          })()}
-
-          {/* B. DEBATE COACH OVERVIEW */}
-          {isCoach && (
-            <div>
-              {/* Quick Metrics */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>ASSIGNED STUDENTS</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>{coachOverview.assigned_students}</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>CLASS PERFORMANCE AVERAGE</div>
-                  <div className="font-display text-red" style={{ fontSize: '2.2rem', fontWeight: 900 }}>{coachOverview.class_performance_average}%</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>PENDING EVALUATIONS</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>{coachOverview.pending_evaluations}</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>STATUS SYSTEM</div>
-                  <div className="font-display" style={{ fontSize: '1.6rem', fontWeight: 900, color: '#10B981' }}>{coachOverview.system_status}</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2.5rem' }}>
-                {/* Student Progress Monitoring */}
-                <div style={{ background: '#FFF', padding: '2rem', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                    <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>Student Progress Monitoring</h3>
-                    <span className="font-mono" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{coachStudents.length} ENROLLED</span>
-                  </div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
-                          <th style={{ padding: '0.75rem' }}>Student Name</th>
-                          <th style={{ padding: '0.75rem' }}>Active Debate / Session Topic</th>
-                          <th style={{ padding: '0.75rem' }}>Sessions</th>
-                          <th style={{ padding: '0.75rem' }}>Grade</th>
-                          <th style={{ padding: '0.75rem' }}>Avg Score</th>
-                          <th style={{ padding: '0.75rem' }}>Top Logic Gap / Metric</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {coachStudents.length > 0 ? (
-                          coachStudents.map((student) => (
-                            <tr key={student.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                              <td style={{ padding: '0.85rem' }}>
-                                <div style={{ fontWeight: 600, color: '#111827' }}>{student.name}</div>
-                                <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{student.email}</div>
-                              </td>
-                              <td style={{ padding: '0.85rem', maxWidth: '200px' }}>
-                                <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>
-                                  {student.topic}
-                                </div>
-                                <span style={{ fontSize: '0.72rem', color: '#6B7280' }}>{student.format}</span>
-                              </td>
-                              <td style={{ padding: '0.85rem', fontWeight: 600 }}>{student.total_sessions}</td>
-                              <td style={{ padding: '0.85rem' }}>
-                                <span style={{
-                                  padding: '0.2rem 0.5rem',
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  borderRadius: '6px',
-                                  background: student.grade && student.grade.startsWith('A') ? '#ECFDF5' : student.grade && student.grade.startsWith('B') ? '#EFF6FF' : '#FEF2F2',
-                                  color: student.grade && student.grade.startsWith('A') ? '#059669' : student.grade && student.grade.startsWith('B') ? '#2563EB' : '#DC2626'
-                                }}>
-                                  {student.grade}
-                                </span>
-                              </td>
-                              <td style={{ padding: '0.85rem', color: 'var(--accent-red)', fontWeight: 700 }}>
-                                {student.score > 0 ? `${student.score}%` : 'N/A'}
-                              </td>
-                              <td style={{ padding: '0.85rem' }}>
-                                <span style={{ background: '#FEE2E2', color: '#D90429', padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700 }}>
-                                  {student.gap}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF' }}>
-                              No students registered in the database yet.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Sidebar Skill Gaps and Recommendations Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <div style={{ background: '#111827', color: '#FFF', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-                    <div className="font-mono text-red" style={{ fontSize: '0.72rem', marginBottom: '0.5rem' }}>ROSTER SKILL GAP ANALYSIS</div>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Top Class Pain Points</h4>
-                    <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: '#ccc' }}>
-                      {coachOverview.top_class_pain_points && coachOverview.top_class_pain_points.length > 0 ? (
-                        coachOverview.top_class_pain_points.map((pt, idx) => (
-                          <li key={idx}>{pt}</li>
-                        ))
-                      ) : (
-                        <>
-                          <li>Logical consistency remains steady across recent debate transcripts.</li>
-                          <li>Encourage speech recordings in Presentation Analysis studio to evaluate speaking cadence.</li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-
-                  {/* Coaching feedback form */}
-                  <div style={{ background: '#FFF', border: '1px solid #E5E7EB', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                    <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
-                       OFFICIAL EVALUATOR DISPATCH
-                    </div>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>
-                      Assign Official Grade & Coaching Directives
-                    </h4>
-                    {coachSuccessMsg && (
-                      <div style={{ background: '#ECFDF5', border: '1px solid #6EE7B7', color: '#059669', padding: '0.75rem', borderRadius: '8px', fontSize: '0.825rem', marginBottom: '1rem', fontWeight: 600 }}>
-                        {coachSuccessMsg}
-                      </div>
-                    )}
-                    <form onSubmit={handleSendCoachFeedback}>
-                      <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>Select Student</label>
-                        <select 
-                          value={selectedStudentId} 
-                          onChange={(e) => handleStudentSelectChange(e.target.value)}
-                          style={{ width: '100%', padding: '0.6rem', border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFF', fontSize: '0.85rem' }}
-                        >
-                          {coachStudents.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name} ({s.email}) — Current Grade: {s.grade}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Debate Session Selection */}
-                      {(() => {
-                        const curStudent = coachStudents.find(s => String(s.id) === String(selectedStudentId));
-                        const sessions = curStudent?.sessions || [];
-                        return (
-                          <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>
-                              Target Debate Session to Grade
-                            </label>
-                            <select
-                              value={selectedCoachSessionId}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setSelectedCoachSessionId(val);
-                                if (val !== 'latest' && val !== 'all') {
-                                  const targetSess = sessions.find(s => String(s.id) === String(val));
-                                  if (targetSess && targetSess.coach_grade && targetSess.coach_grade !== 'Pending') {
-                                    setCoachGradeInput(targetSess.coach_grade);
-                                    if (targetSess.coach_marks !== null && targetSess.coach_marks !== undefined) {
-                                      setCoachMarksInput(String(targetSess.coach_marks));
-                                    }
-                                  }
-                                }
-                              }}
-                              style={{ width: '100%', padding: '0.6rem', border: '1px solid #E5E7EB', borderRadius: '8px', background: '#FFF', fontSize: '0.85rem' }}
-                            >
-                              <option value="latest">Latest Session ({curStudent?.topic ? (curStudent.topic.length > 40 ? curStudent.topic.substring(0, 40) + '...' : curStudent.topic) : 'Most Recent'})</option>
-                              {sessions.map((sess) => (
-                                <option key={sess.id} value={sess.id}>
-                                  Session {sess.id}: {sess.topic?.length > 40 ? sess.topic.substring(0, 40) + '...' : sess.topic} [Grade: {sess.coach_grade || 'Pending'}]
-                                </option>
-                              ))}
-                              <option value="all">Apply to All Practice Sessions of this Student</option>
-                            </select>
-                          </div>
-                        );
-                      })()}
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>
-                            Assign Official Grade
-                          </label>
-                          <select
-                            value={coachGradeInput}
-                            onChange={(e) => setCoachGradeInput(e.target.value)}
-                            style={{ width: '100%', padding: '0.6rem', border: '1px solid #111827', borderRadius: '8px', background: '#FFF', fontSize: '0.85rem', fontWeight: 700 }}
-                          >
-                            <option value="A+">A+ (Mastery / Distinction)</option>
-                            <option value="A">A (Advanced Debater)</option>
-                            <option value="A-">A- (Proficient Speaker)</option>
-                            <option value="B+">B+ (Competent Rhetorician)</option>
-                            <option value="B">B (Developing Competitor)</option>
-                            <option value="C">C (Foundational Stage)</option>
-                            <option value="D">D (Remedial Drills Needed)</option>
-                            <option value="Pending">Pending Evaluation</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>
-                            Evaluator Marks (%)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="100"
-                            value={coachMarksInput}
-                            onChange={(e) => setCoachMarksInput(e.target.value)}
-                            placeholder="e.g. 96.5"
-                            style={{ width: '100%', padding: '0.6rem', border: '1px solid #111827', borderRadius: '8px', background: '#FFF', fontSize: '0.85rem', fontWeight: 700, boxSizing: 'border-box' }}
-                          />
-                        </div>
-                      </div>
-
-                      <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>Coaching Directive / Feedback</label>
-                        <textarea 
-                          rows={3} 
-                          value={coachFeedbackInput}
-                          onChange={(e) => setCoachFeedbackInput(e.target.value)}
-                          placeholder="e.g. Work on pausing to reduce filler words. Aim for 140 WPM during rebuttal." 
-                          style={{ width: '100%', padding: '0.6rem', border: '1px solid #E5E7EB', borderRadius: '8px', outline: 'none', boxSizing: 'border-box', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                      <button type="submit" className="btn btn-red" style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 700, textTransform: 'uppercase' }}>
-                        DISPATCH GRADE & DIRECTIVE
-                      </button>
-                    </form>
-                  </div>
-
-                  {/* Debate Coach Reports & Analytics Export Suite */}
-                  <div style={{ background: '#FFF', border: '1px solid #E5E7EB', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                    <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
-                      COACHING COMPLIANCE & EXPORTS
-                    </div>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                      Debate Coach Reports Suite
-                    </h4>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.25rem', lineHeight: '1.4' }}>
-                      Export official coach assessment evaluations, student performance matrices, and instructional directives.
-                    </p>
-
-                    {coachReportMsg && (
-                      <div style={{
-                        background: coachReportMsg.type === 'error' ? '#FEF2F2' : '#ECFDF5',
-                        border: `1px solid ${coachReportMsg.type === 'error' ? '#FCA5A5' : '#6EE7B7'}`,
-                        color: coachReportMsg.type === 'error' ? '#DC2626' : '#059669',
-                        padding: '0.6rem 0.8rem',
-                        borderRadius: '8px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        marginBottom: '1rem'
-                      }}>
-                        {coachReportMsg.text}
-                      </div>
-                    )}
-
-                    <div style={{ marginBottom: '1.25rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#374151', marginBottom: '0.3rem' }}>
-                        Target Student / Cohort
-                      </label>
-                      <select
-                        value={coachReportStudentId}
-                        onChange={(e) => setCoachReportStudentId(e.target.value)}
-                        style={{ width: '100%', padding: '0.6rem', border: '1px solid #111827', borderRadius: '8px', background: '#F9FAFB', fontSize: '0.825rem', fontWeight: 600 }}
-                      >
-                        <option value="all">All Enrolled Students (Cohort Master Audit)</option>
-                        {coachStudents.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name} ({s.email})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                      <button
-                        onClick={() => handleCoachReportDownload('pdf')}
-                        disabled={coachDownloading === 'pdf'}
-                        className="btn btn-red"
-                        style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        {coachDownloading === 'pdf' ? 'GENERATING ASSESSMENT PDF...' : '1. ASSESSMENT PDF REPORT'}
-                      </button>
-
-                      <button
-                        onClick={() => handleCoachReportDownload('excel')}
-                        disabled={coachDownloading === 'excel'}
-                        className="btn btn-dark"
-                        style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        {coachDownloading === 'excel' ? 'EXPORTING CSV MATRIX...' : '2. EXCEL & CSV METRIC MATRIX'}
-                      </button>
-
-                      <button
-                        onClick={() => handleCoachReportDownload('coaching')}
-                        disabled={coachDownloading === 'coaching'}
-                        className="btn btn-dark"
-                        style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}
-                      >
-                        {coachDownloading === 'coaching' ? 'GENERATING COACHING PLAN...' : '3. COACHING PLANS (PDF)'}
-                      </button>
-                    </div>
-
-                    <div style={{ marginTop: '1.25rem', textAlign: 'center', paddingTop: '1rem', borderTop: '1px solid #F3F4F6' }}>
-                      <Link href="/reports" style={{ fontSize: '0.78rem', color: 'var(--accent-red)', fontWeight: 700, textDecoration: 'underline' }}>
-                        Open Full Reports & Performance Certificates Hub →
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* C. EDUCATOR OVERVIEW */}
-          {isEducator && (
-            <div>
-              {/* Roster classroom statistics cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>ACTIVE CLASSES</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>1</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>TOTAL ENROLLED STUDENTS</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>{coachStudents.length}</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>CLASS DEBATE AVERAGE</div>
-                  <div className="font-display text-red" style={{ fontSize: '2.2rem', fontWeight: 900 }}>{coachOverview.class_performance_average}%</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>PLATFORM STATUS</div>
-                  <div className="font-display text-red" style={{ fontSize: '1.6rem', fontWeight: 900 }}>100% ONLINE</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2.5rem' }}>
-                {/* Student Rankings */}
-                <div style={{ background: '#FFF', padding: '2rem', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                  <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem' }}>Student Leaderboard Rankings</h3>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
-                        <th style={{ padding: '0.75rem' }}>Rank</th>
-                        <th style={{ padding: '0.75rem' }}>Student Name</th>
-                        <th style={{ padding: '0.75rem' }}>Active Debate / Session</th>
-                        <th style={{ padding: '0.75rem' }}>Total Sessions</th>
-                        <th style={{ padding: '0.75rem' }}>Overall Score</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {coachStudents.length > 0 ? (
-                        [...coachStudents].sort((a, b) => (b.score || 0) - (a.score || 0)).map((student, i) => (
-                          <tr key={student.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                            <td style={{ padding: '0.85rem', fontWeight: 700 }}>#{i + 1}</td>
-                            <td style={{ padding: '0.85rem' }}>
-                              <div style={{ fontWeight: 600 }}>{student.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: '#6B7280' }}>{student.email}</div>
-                            </td>
-                            <td style={{ padding: '0.85rem' }}>{student.topic}</td>
-                            <td style={{ padding: '0.85rem', fontWeight: 600 }}>{student.total_sessions}</td>
-                            <td style={{ padding: '0.85rem', color: 'var(--accent-red)', fontWeight: 700 }}>{student.score > 0 ? `${student.score}%` : 'N/A'}</td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#9CA3AF' }}>
-                            No enrolled student metrics found yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Reports Panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <div style={{ background: '#111827', color: '#FFF', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Active Debate Motion Topics</h4>
-                    <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: '#ccc' }}>
-                      <li>Autonomous AI systems legal liability standards</li>
-                      <li>Space Exploration vs. Deep Ocean Funding Priorities</li>
-                      <li>Universal Basic Income and Macroeconomic Stability</li>
-                    </ul>
-                  </div>
-
-                  {/* Assessment reports generator tool */}
-                  <div style={{ background: '#FFF', border: '1px solid #E5E7EB', padding: '2.2rem 2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Classroom Reports Engine</h4>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
-                      Export debate and presentation assessment audits as standardized CSV/PDF reports.
-                    </p>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <Link href="/reports" className="btn btn-dark" style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem', textAlign: 'center' }}>
-                        Open Assessment Reports Hub
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* D. ADMIN OVERVIEW */}
-          {isAdmin && (
-            <div>
-              {/* Admin Platform Stats cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>TOTAL PLATFORM USERS</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>1,420</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>ACTIVE AI OPPO AGENTS</div>
-                  <div className="font-display" style={{ fontSize: '2.2rem', fontWeight: 900 }}>8 Agents</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>LLM INFERENCE LATENCY</div>
-                  <div className="font-display text-red" style={{ fontSize: '2.2rem', fontWeight: 900 }}>112ms</div>
-                </div>
-                <div style={{ padding: '1.75rem', background: '#FFF', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-                  <div className="font-mono text-muted" style={{ fontSize: '0.75rem', marginBottom: '0.4rem' }}>SYSTEM UPTIME</div>
-                  <div className="font-display text-red" style={{ fontSize: '2.2rem', fontWeight: 900 }}>99.98%</div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '2.5rem' }}>
-                {/* User Management Panel */}
-                <div style={{ background: '#FFF', padding: '2rem', border: '1px solid #E5E7EB', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                  <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', marginBottom: '1.5rem' }}>User Directory Access Control</h3>
-                  
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem', marginBottom: '1.5rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
-                        <th style={{ padding: '0.75rem' }}>User Email</th>
-                        <th style={{ padding: '0.75rem' }}>Role Level</th>
-                        <th style={{ padding: '0.75rem' }}>Platform Status</th>
-                        <th style={{ padding: '0.75rem' }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        { email: 'mentor@logos.ai', role: 'Debate Coach', status: 'Active' },
-                        { email: 'admin@logos.ai', role: 'Administrator', status: 'Active' },
-                        { email: 'student1@logos.ai', role: 'Learner', status: 'Active' },
-                        { email: 'teacher@logos.ai', role: 'Educator', status: 'Suspended' }
-                      ].map((user, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                          <td style={{ padding: '0.85rem', fontWeight: 600 }}>{user.email}</td>
-                          <td style={{ padding: '0.85rem' }}>{user.role}</td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <span style={{ 
-                              background: user.status === 'Active' ? '#ECFDF5' : '#FEF2F2', 
-                              color: user.status === 'Active' ? '#059669' : '#DC2626', 
-                              padding: '0.2rem 0.5rem', 
-                              borderRadius: '6px',
-                              fontSize: '0.72rem', 
-                              fontWeight: 700 
-                            }}>
-                              {user.status}
-                            </span>
-                          </td>
-                          <td style={{ padding: '0.85rem' }}>
-                            <button onClick={() => alert(`Status change for ${user.email} triggered!`)} style={{ background: 'none', border: 'none', color: '#D90429', fontWeight: 600, cursor: 'pointer', fontSize: '0.78rem', textDecoration: 'underline' }}>
-                              Toggle Status
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  <button onClick={() => alert("Mock user creation template loaded.")} className="btn btn-dark" style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.8rem' }}>
-                    Add New Platform User
-                  </button>
-                </div>
-
-                {/* Platform Health and System Reports */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  <div style={{ background: '#111827', color: '#FFF', padding: '2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-                    <div className="font-mono text-red" style={{ fontSize: '0.72rem', marginBottom: '0.5rem' }}>AI MODEL MONITORING</div>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Embedding Index Health</h4>
-                    <ul style={{ paddingLeft: '1.2rem', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem', color: '#ccc' }}>
-                      <li>Vector Database Size: <strong>3.42 GB (FAISS context indexes)</strong></li>
-                      <li>Retrieval Precision Rating: <strong>98.5% precision</strong></li>
-                      <li>GPU Latency Threshold: <strong>Under 12ms</strong></li>
-                    </ul>
-                  </div>
-
-                  {/* Server control buttons */}
-                  <div style={{ background: '#FFF', border: '1px solid #E5E7EB', padding: '2.2rem 2rem', borderRadius: '14px', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-                    <h4 className="font-display" style={{ fontSize: '1.15rem', fontWeight: 800, textTransform: 'uppercase', marginBottom: '1rem' }}>Platform Operations</h4>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: '1.4' }}>
-                      Perform semantic indexing refactoring, clear logged database stacks, or extract system status configurations.
-                    </p>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <button onClick={() => alert("Vector context memory index rebuilt successfully!")} className="btn btn-dark" style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem' }}>
-                        Re-index Semantic Database
-                      </button>
-                      <button onClick={() => alert("Platform traffic status logs exported!")} className="btn btn-login" style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', fontSize: '0.8rem', border: '1px solid #E5E7EB' }}>
-                        Download System Audit Report
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ========================================================================= */}
       {/* 2. DEBATE HISTORY TAB (Available for All Roles) */}
@@ -2032,7 +1143,7 @@ export default function DashboardPage() {
                   <th style={{ padding: '0.75rem 1rem' }}>Format</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Position</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Status</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Date Completed</th>
+                  <th style={{ padding: '0.75rem 1rem' }}>Date Completed (IST)</th>
                   <th style={{ padding: '0.75rem 1rem' }}>Performance</th>
                 </tr>
               </thead>
@@ -2112,7 +1223,7 @@ export default function DashboardPage() {
       {activeTab === 'trends' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           
-          {/* 1. DOMAIN CATEGORY SELECTOR BAR (Debate, Presentation, Argument, Policy, Counter) */}
+          {/* 1. DOMAIN CATEGORY SELECTOR BAR (Debate, Presentation, Argument, Fallacy, Counter) */}
           <div className="trend-card-box" style={{
             background: '#FFFFFF',
             border: '1px solid #E5E7EB',
@@ -2139,7 +1250,7 @@ export default function DashboardPage() {
                 { id: 'debate', label: 'DEBATE SIMULATION', color: '#D90429', count: debateTrendData.length },
                 { id: 'presentation', label: 'PRESENTATION ANALYSIS', color: '#7C3AED', count: presentationTrendData.length },
                 { id: 'argument', label: 'ARGUMENT ANALYSIS', color: '#2563EB', count: argumentTrendData.length },
-                { id: 'policy', label: 'POLICY REBUTTALS', color: '#059669', count: policyTrendData.length },
+                { id: 'fallacy', label: 'FALLACY DETECTOR', color: '#059669', count: fallacyTrendData.length },
                 { id: 'counter', label: 'COUNTER ENGINE', color: '#EA580C', count: counterTrendData.length }
               ].map((cat) => {
                 const isSelected = trendCategory === cat.id;
@@ -2400,10 +1511,10 @@ export default function DashboardPage() {
               }
 
               const reportUrl = (() => {
-                if (trendCategory === 'presentation') return '/presentation-analysis';
-                if (trendCategory === 'argument') return '/argument-analysis';
-                if (trendCategory === 'counter') return '/counter-argument';
-                if (trendCategory === 'policy') return '/simulation';
+                if (trendCategory === 'presentation') {
+                  const isRealSession = typeof activeTrend.id === 'number' || !String(activeTrend.id).startsWith('pres-');
+                  return isRealSession ? `/dashboard/performance?session_id=${activeTrend.id}&type=vocal` : '/presentation-analysis';
+                }
                 return `/dashboard/performance?session_id=${activeTrend.id}`;
               })();
 
@@ -2432,7 +1543,7 @@ export default function DashboardPage() {
                         fontSize: '0.82rem', 
                         whiteSpace: 'nowrap' 
                       }}>
-                        {activeCategoryConfig.roundPrefix} #{activeTrend.round}
+                        {activeCategoryConfig.roundPrefix} {activeTrend.round}
                       </div>
                       {isLocked && (
                         <span style={{ 
@@ -2476,25 +1587,27 @@ export default function DashboardPage() {
                         {activeTrend.delta >= 0 ? `+${activeTrend.delta}%` : `${activeTrend.delta}%`}
                       </span>
                     </div>
-                    <Link
-                      href={reportUrl}
-                      className="trend-action-btn"
-                      style={{
-                        background: activeCategoryConfig.color,
-                        color: '#FFF',
-                        padding: '0.4rem 0.85rem',
-                        borderRadius: '6px',
-                        fontSize: '0.78rem',
-                        fontWeight: 800,
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '0.3rem',
-                        border: '1.5px solid transparent'
-                      }}
-                    >
-                      View Report →
-                    </Link>
+                    {(trendCategory === 'debate' || trendCategory === 'presentation') && (
+                      <Link
+                        href={reportUrl}
+                        className="trend-action-btn"
+                        style={{
+                          background: activeCategoryConfig.color,
+                          color: '#FFF',
+                          padding: '0.4rem 0.85rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          border: '1.5px solid transparent'
+                        }}
+                      >
+                        View Full Report →
+                      </Link>
+                    )}
                     {isLocked && (
                       <button
                         type="button"
@@ -2832,105 +1945,513 @@ export default function DashboardPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 3. PRESENTATION ANALYSIS ARCHIVE TAB (Available for All Roles) */}
+      {/* 3. PRESENTATION ANALYSIS & SPEECH PROSODY TAB (Available for All Roles)   */}
       {/* ========================================================================= */}
       {activeTab === 'presentations' && (
-        <div style={{ background: '#FFF', padding: '2.5rem 2rem', borderRadius: '14px', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <div>
-              <h3 className="font-display" style={{ fontSize: '1.5rem', fontWeight: 900, textTransform: 'uppercase', margin: 0 }}>
-                Complete Presentation Analysis & Speech Prosody Archive
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0.25rem 0 0' }}>
-                Every recorded presentation, speaking pace metric, filler word count, and confidence rating preserved across sessions.
-              </p>
-            </div>
-            <Link href="/presentation-analysis" className="btn btn-red" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', fontSize: '0.825rem' }}>
-              + RECORD PRESENTATION ANALYSIS
-            </Link>
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
-                  <th style={{ padding: '0.75rem 1rem' }}>Speech Title / Topic</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Speaking Pace</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Filler Words</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Confidence</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Vocal Clarity</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Overall Score</th>
-                  <th style={{ padding: '0.75rem 1rem' }}>Date Completed</th>
-                  <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Performance</th>
-                </tr>
-              </thead>
-              <tbody>
-                {presentationHistory.length > 0 ? (
-                  presentationHistory.map((p) => (
-                    <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
-                      <td 
-                        style={{ padding: '0.85rem 1rem', cursor: 'pointer' }}
-                        onClick={() => setSelectedTopicId(p.id)}
-                      >
-                        <div style={{
-                          padding: '0.45rem 0.75rem',
-                          borderRadius: '8px',
-                          border: selectedTopicId === p.id ? '2px solid #000000' : '2px solid transparent',
-                          background: selectedTopicId === p.id ? '#F9FAFB' : 'transparent',
-                          fontWeight: 600,
-                          color: '#111827',
-                          display: 'inline-block',
-                          transition: 'all 0.18s ease'
-                        }}>
-                          {p.topic || p.title}
-                        </div>
-                      </td>
-                      <td style={{ padding: '1rem', color: '#374151' }}>{p.wpm} WPM</td>
-                      <td style={{ padding: '1rem', color: p.filler_words_count > 2 ? '#D90429' : '#10B981', fontWeight: 600 }}>
-                        {p.filler_words_count} fillers
-                      </td>
-                      <td style={{ padding: '1rem', color: '#059669', fontWeight: 700 }}>{p.confidence_score}%</td>
-                      <td style={{ padding: '1rem', color: '#374151' }}>{p.clarity_score}%</td>
-                      <td style={{ padding: '1rem', color: 'var(--accent-red)', fontWeight: 700 }}>{p.overall_score || 85}%</td>
-                      <td style={{ padding: '1rem', color: '#6B7280' }}>{p.date}</td>
-                      <td style={{ padding: '1rem', textAlign: 'center' }}>
-                        <Link
-                          href={`/dashboard/performance?session_id=${p.session_id || p.id}&type=vocal`}
-                          title="Open Presentation Analysis Performance Breakdown"
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: '#D90429',
-                            color: '#FFFFFF',
-                            width: '28px',
-                            height: '28px',
-                            borderRadius: '6px',
-                            textDecoration: 'none',
-                            fontWeight: 900,
-                            fontSize: '0.95rem',
-                            lineHeight: '1',
-                            boxShadow: '0 2px 6px rgba(217, 4, 41, 0.25)',
-                            transition: 'all 0.15s ease'
+          {/* Complete Presentation Archive Table */}
+          <div style={{ background: '#FFF', padding: '2.5rem 2rem', borderRadius: '14px', border: '1px solid #E5E7EB', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', margin: 0, color: '#111827' }}>
+                  Presentation Analysis &amp; Speech Prosody Archive
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#6B7280', margin: '0.25rem 0 0' }}>
+                  Click &ldquo;Score →&rdquo; on any presentation topic to inspect its complete analysis data, delivery graphs, pros &amp; cons, strengths, improvements, and AI coaching.
+                </p>
+              </div>
+              <Link href="/presentation-analysis" className="btn btn-red" style={{ padding: '0.6rem 1.25rem', borderRadius: '8px', fontSize: '0.825rem' }}>
+                + RECORD PRESENTATION ANALYSIS
+              </Link>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #E5E7EB', color: '#374151', fontWeight: 600 }}>
+                    <th style={{ padding: '0.75rem 1rem' }}>Speech Title / Topic</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Speaking Pace</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Filler Words</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Confidence</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Vocal Clarity</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Overall Score</th>
+                    <th style={{ padding: '0.75rem 1rem' }}>Date Completed (IST)</th>
+                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center' }}>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {presentationHistory.length > 0 ? (
+                    presentationHistory.map((p) => {
+                      return (
+                        <tr 
+                          key={p.id} 
+                          onClick={() => setSelectedScoreSession(p)}
+                          style={{ 
+                            borderBottom: '1px solid #F3F4F6',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s ease'
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#B00320'; e.currentTarget.style.transform = 'scale(1.1)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = '#D90429'; e.currentTarget.style.transform = 'scale(1)'; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = '#F9FAFB'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          →
-                        </Link>
+                          <td style={{ padding: '0.85rem 1rem' }}>
+                            <div style={{
+                              fontWeight: 700,
+                              color: '#111827',
+                              fontSize: '0.92rem'
+                            }}>
+                              {p.topic || p.title}
+                            </div>
+                          </td>
+                          <td style={{ padding: '1rem', color: '#374151' }}>
+                            {p.speech_pace_wpm || p.wpm} WPM
+                            <span style={{ 
+                              display: 'block', 
+                              fontSize: '0.72rem', 
+                              fontFamily: 'var(--font-mono)', 
+                              color: p.pace_status === 'optimal' ? '#059669' : (p.pace_status === 'moderate' ? '#D97706' : '#D90429') 
+                            }}>
+                              {p.pace_status || 'measured'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem', color: p.filler_words_count > 2 ? '#D90429' : '#10B981', fontWeight: 600 }}>
+                            {p.filler_words_count} fillers
+                          </td>
+                          <td style={{ padding: '1rem', color: '#059669', fontWeight: 700 }}>
+                            {p.confidence_score}%
+                            <span style={{ display: 'block', fontSize: '0.72rem', color: '#6B7280', fontWeight: 500 }}>
+                              {(p.confidence_score_10 !== undefined ? p.confidence_score_10 : (p.confidence_score / 10)).toFixed(1)} / 10
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem', color: '#374151' }}>
+                            {p.clarity_score}%
+                            <span style={{ display: 'block', fontSize: '0.72rem', color: '#6B7280', fontWeight: 500 }}>
+                              {(p.clarity_score_10 !== undefined ? p.clarity_score_10 : (p.clarity_score / 10)).toFixed(1)} / 10
+                            </span>
+                          </td>
+                          <td style={{ padding: '1rem', color: 'var(--accent-red)', fontWeight: 700 }}>
+                            {p.overall_score || 85}%
+                          </td>
+                          <td style={{ padding: '1rem', color: '#6B7280', fontSize: '0.85rem' }}>
+                            {p.date}
+                          </td>
+                          <td style={{ padding: '1rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedScoreSession(p)}
+                              title="Click to view complete score analysis data"
+                              className="btn btn-red"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                padding: '0.45rem 0.95rem',
+                                borderRadius: '8px',
+                                fontSize: '0.8rem',
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                                letterSpacing: '0.04em',
+                                boxShadow: '0 2px 8px rgba(217, 4, 41, 0.25)',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              <span>Score</span>
+                              <span style={{ fontSize: '0.95rem' }}>→</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: '#9CA3AF', borderRadius: '8px' }}>
+                        No Presentation Analysis sessions recorded yet. Open the Presentation Analysis studio to evaluate your first speech!
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: '#9CA3AF', borderRadius: '8px' }}>
-                      No Presentation Analysis sessions recorded yet. Open the Presentation Analysis studio to evaluate your first speech!
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {/* ========================================================================= */}
+          {/* COMPLETE SCORE ANALYSIS MODAL (Triggered Directly from Score Option)     */}
+          {/* ========================================================================= */}
+          {selectedScoreSession && (
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(17, 24, 39, 0.7)',
+                backdropFilter: 'blur(4px)',
+                zIndex: 9999,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '1.5rem',
+                overflowY: 'auto'
+              }}
+              onClick={() => setSelectedScoreSession(null)}
+            >
+              <div 
+                style={{
+                  background: '#FFFFFF',
+                  borderRadius: '16px',
+                  maxWidth: '960px',
+                  width: '100%',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                  border: '2px solid #E5E7EB',
+                  position: 'relative'
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div style={{ padding: '2rem 2rem 1.25rem', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        fontWeight: 800, 
+                        letterSpacing: '0.06em', 
+                        textTransform: 'uppercase', 
+                        background: '#FEF2F2', 
+                        color: 'var(--accent-red)', 
+                        padding: '0.25rem 0.6rem', 
+                        borderRadius: '6px' 
+                      }}>
+                        PRESENTATION ANALYSIS SCORE
+                      </span>
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        fontWeight: 700, 
+                        background: '#ECFDF5', 
+                        color: '#059669', 
+                        padding: '0.25rem 0.6rem', 
+                        borderRadius: '6px' 
+                      }}>
+                        COMPLETED
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: '#6B7280' }}>
+                        {selectedScoreSession.date} IST
+                      </span>
+                    </div>
+                    <h2 className="font-display" style={{ fontSize: '1.75rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0', color: '#111827', lineHeight: '1.25' }}>
+                      {selectedScoreSession.topic || selectedScoreSession.title}
+                    </h2>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', fontSize: '0.82rem', color: '#6B7280', marginTop: '0.4rem' }}>
+                      <div>Session ID: <strong style={{ color: '#111827' }}>#{selectedScoreSession.session_id || selectedScoreSession.id}</strong></div>
+                      <div>Format: <strong style={{ color: '#111827' }}>Presentation Analysis</strong></div>
+                      <div>Evaluator: <strong style={{ color: '#111827' }}>Debate Coach / AI Coach</strong></div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedScoreSession(null)}
+                    style={{
+                      background: '#F3F4F6',
+                      border: 'none',
+                      borderRadius: '8px',
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.2rem',
+                      color: '#4B5563',
+                      cursor: 'pointer',
+                      fontWeight: 800,
+                      flexShrink: 0
+                    }}
+                    title="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  
+                  {/* 1. TOP TELEMETRY METRICS: PACE, FILLER WORDS, OVERALL SCORE */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem' }}>
+                    
+                    {/* Speaking Pace Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FAFAFA', textAlign: 'center' }}>
+                      <div className="font-mono text-muted" style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                        PACE
+                      </div>
+                      <div className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
+                        {selectedScoreSession.speech_pace_wpm || selectedScoreSession.wpm} <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#6B7280' }}>wpm</span>
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.82rem', 
+                        fontWeight: 700, 
+                        fontFamily: 'var(--font-mono)',
+                        color: selectedScoreSession.pace_status === 'optimal' ? '#059669' : (selectedScoreSession.pace_status === 'moderate' ? '#D97706' : '#D90429'),
+                        textTransform: 'lowercase'
+                      }}>
+                        {selectedScoreSession.pace_status === 'optimal' ? '✓ optimal range' : (selectedScoreSession.pace_status === 'moderate' ? 'steady cadence' : '⚡ needs cadence adjustment')}
+                      </div>
+                    </div>
+
+                    {/* Filler Words Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FAFAFA', textAlign: 'center' }}>
+                      <div className="font-mono text-muted" style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                        FILLER WORDS
+                      </div>
+                      <div className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: selectedScoreSession.filler_words_count > 0 ? 'var(--accent-red)' : 'var(--text-primary)', margin: '0.2rem 0' }}>
+                        {selectedScoreSession.filler_words_count}
+                      </div>
+                      <div className="font-mono" style={{ fontSize: '0.78rem', color: '#6B7280', wordBreak: 'break-word' }}>
+                        {selectedScoreSession.filler_words_count === 0 ? 'zero filler words detected' : (selectedScoreSession.filler_words_list || `${selectedScoreSession.filler_words_count} detected`)}
+                      </div>
+                    </div>
+
+                    {/* Overall Score Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FAFAFA', textAlign: 'center' }}>
+                      <div className="font-mono text-muted" style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                        OVERALL SCORE
+                      </div>
+                      <div className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: 'var(--accent-red)', margin: '0.2rem 0' }}>
+                        {selectedScoreSession.overall_score || 85}%
+                      </div>
+                      <div className="font-mono" style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+                        keynote prosody composite
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 2. PRESENTATION DELIVERY GRAPHS (1.0 – 10.0 SCALE) */}
+                  <div style={{ padding: '1.6rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <span className="font-mono text-muted" style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        PRESENTATION DELIVERY GRAPHS
+                      </span>
+                      <span className="font-mono" style={{ fontSize: '0.75rem', color: '#4B5563', background: '#F3F4F6', padding: '0.25rem 0.6rem', borderRadius: '6px', fontWeight: 700 }}>
+                        1.0 – 10.0 SCALE
+                      </span>
+                    </div>
+
+                    {/* Confidence Metric Row */}
+                    <div style={{ marginBottom: '1.2rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                        <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                          CONFIDENCE
+                        </span>
+                        <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                          {(selectedScoreSession.confidence_score_10 !== undefined ? selectedScoreSession.confidence_score_10 : ((selectedScoreSession.confidence_score || 80) / 10)).toFixed(1)} <span style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 600 }}>({selectedScoreSession.confidence_score}%)</span>
+                        </span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          width: `${Math.min(100, Math.max(5, ((selectedScoreSession.confidence_score_10 !== undefined ? selectedScoreSession.confidence_score_10 : ((selectedScoreSession.confidence_score || 80) / 10)) / 10) * 100))}%`, 
+                          height: '100%', 
+                          background: '#F97316', 
+                          borderRadius: '9999px',
+                          transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}></div>
+                      </div>
+                    </div>
+
+                    {/* Clarity Metric Row */}
+                    <div style={{ marginBottom: '1.2rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                        <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                          VOCAL CLARITY
+                        </span>
+                        <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                          {(selectedScoreSession.clarity_score_10 !== undefined ? selectedScoreSession.clarity_score_10 : ((selectedScoreSession.clarity_score || 80) / 10)).toFixed(1)} <span style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 600 }}>({selectedScoreSession.clarity_score}%)</span>
+                        </span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          width: `${Math.min(100, Math.max(5, ((selectedScoreSession.clarity_score_10 !== undefined ? selectedScoreSession.clarity_score_10 : ((selectedScoreSession.clarity_score || 80) / 10)) / 10) * 100))}%`, 
+                          height: '100%', 
+                          background: '#F97316', 
+                          borderRadius: '9999px',
+                          transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}></div>
+                      </div>
+                    </div>
+
+                    {/* Engagement Metric Row */}
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                        <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                          AUDIENCE ENGAGEMENT
+                        </span>
+                        <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                          {(selectedScoreSession.engagement_score_10 !== undefined ? selectedScoreSession.engagement_score_10 : ((selectedScoreSession.engagement_score || 80) / 10)).toFixed(1)} <span style={{ fontSize: '0.75rem', color: '#9CA3AF', fontWeight: 600 }}>({selectedScoreSession.engagement_score}%)</span>
+                        </span>
+                      </div>
+                      <div style={{ width: '100%', height: '8px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          width: `${Math.min(100, Math.max(5, ((selectedScoreSession.engagement_score_10 !== undefined ? selectedScoreSession.engagement_score_10 : ((selectedScoreSession.engagement_score || 80) / 10)) / 10) * 100))}%`, 
+                          height: '100%', 
+                          background: '#F97316', 
+                          borderRadius: '9999px',
+                          transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}></div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 3. SIDE-BY-SIDE STRENGTHS & IMPROVEMENTS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                    
+                    {/* Strengths Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF' }}>
+                      <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                        STRENGTHS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {(selectedScoreSession.strengths && selectedScoreSession.strengths.length > 0 ? selectedScoreSession.strengths : [
+                          "Establishes a recognizable presentation premise and core speaking intent",
+                          "Dynamic vocal variety and engaging rhetorical tone"
+                        ]).map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.55' }}>
+                            <span style={{ color: '#059669', fontWeight: 800, marginTop: '-1px' }}>•</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Improvements Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF' }}>
+                      <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--accent-red)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                        IMPROVEMENTS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {(selectedScoreSession.improvements && selectedScoreSession.improvements.length > 0 ? selectedScoreSession.improvements : [
+                          "Increase speaking rate toward the 130-155 WPM sweet spot",
+                          "Strengthen logical transitions between premise, empirical evidence, and concluding impact",
+                          "Anchor principal claims with concrete statistics or authoritative evidence"
+                        ]).map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.55' }}>
+                            <span style={{ color: 'var(--accent-red)', fontWeight: 800, marginTop: '-1px' }}>•</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 4. SIDE-BY-SIDE RHETORICAL PROS & CONS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
+                    
+                    {/* Pros Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF' }}>
+                      <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                        RHETORICAL PROS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {(selectedScoreSession.pros && selectedScoreSession.pros.length > 0 ? selectedScoreSession.pros : [
+                          "Clear vocal delivery that conveys key premise and main speaking objective.",
+                          "Direct articulate delivery with recognizable structural progression."
+                        ]).map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.55' }}>
+                            <span style={{ color: '#059669', fontWeight: 800, marginTop: '-1px' }}>✓</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Cons Card */}
+                    <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF' }}>
+                      <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                        FRICTION POINTS &amp; CONS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                        {(selectedScoreSession.cons && selectedScoreSession.cons.length > 0 ? selectedScoreSession.cons : [
+                          "Premise-to-conclusion transitions could benefit from tighter deductive connective phrasing.",
+                          "Minor opportunities to introduce tactical 2-second rhetorical pauses before major assertions."
+                        ]).map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.55' }}>
+                            <span style={{ color: '#D97706', fontWeight: 800, marginTop: '-1px' }}>⚠</span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* 5. AI COACH FEEDBACK Card */}
+                  <div style={{ background: '#0F172A', color: '#FFF', borderRadius: '14px', padding: '1.5rem 1.75rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+                    <div className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#EF4444', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
+                      AI COACH FEEDBACK:
+                    </div>
+                    <p style={{ fontSize: '0.95rem', color: '#F1F5F9', lineHeight: '1.6', margin: 0 }}>
+                      {selectedScoreSession.ai_feedback || 'Practice the "3-Second Silence Rule". Whenever you feel the urge to use filler phrases, take a silent breath instead. Silence projects executive authority and sharpens argument delivery.'}
+                    </p>
+                  </div>
+
+                  {/* 6. AI PROSODY DIAGNOSIS SUMMARY with TTS */}
+                  <div style={{ padding: '1.5rem', border: '1px solid #E5E7EB', borderRadius: '14px', background: '#FFF', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <span className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        AI PROSODY SUMMARY
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCoachingSpeak('modal_pres_summary', selectedScoreSession.summary || "Your delivery operates with structured communication. To maximize rhetorical impact, focus on refining speech momentum and supporting core arguments with verified evidence to elevate confidence and audience engagement.")}
+                        className="btn"
+                        style={{
+                          background: activeSpeakingKey === "modal_pres_summary" ? "#FEF2F2" : "#F9FAFB",
+                          border: activeSpeakingKey === "modal_pres_summary" ? "1px solid var(--accent-red)" : "1px solid #E5E7EB",
+                          color: activeSpeakingKey === "modal_pres_summary" ? "var(--accent-red)" : "#4B5563",
+                          padding: "0.3rem 0.65rem",
+                          fontSize: "0.72rem",
+                          gap: "0.35rem",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          cursor: "pointer",
+                          borderRadius: "6px"
+                        }}
+                        title="Read summary aloud"
+                      >
+                        <SpeakerIcon size={14} active={activeSpeakingKey === "modal_pres_summary"} />
+                        <span>{activeSpeakingKey === "modal_pres_summary" ? "STOP" : "READ"}</span>
+                      </button>
+                    </div>
+                    <p style={{ fontSize: '0.92rem', color: '#374151', lineHeight: '1.6', margin: '0 0 1rem' }}>
+                      {selectedScoreSession.summary || "Your delivery operates with structured communication. To maximize rhetorical impact, focus on refining speech momentum and supporting core arguments with verified evidence to elevate confidence and audience engagement."}
+                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedScoreSession(null)}
+                        className="btn btn-dark"
+                        style={{ padding: '0.55rem 1.15rem', borderRadius: '8px', fontSize: '0.825rem', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        Close
+                      </button>
+                      <Link
+                        href={`/dashboard/performance?session_id=${selectedScoreSession.session_id || selectedScoreSession.id}&type=vocal`}
+                        className="btn btn-red"
+                        style={{ padding: '0.55rem 1.15rem', borderRadius: '8px', fontSize: '0.825rem', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        VIEW FULL SCORECARD PAGE ↗
+                      </Link>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
 
@@ -3619,7 +3140,7 @@ export default function DashboardPage() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-              <button type="button" onClick={() => setActiveTab('overview')} style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#FFF', fontWeight: 600, cursor: 'pointer' }}>
+              <button type="button" onClick={() => setActiveTab('debates')} style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', border: '1px solid #E5E7EB', background: '#FFF', fontWeight: 600, cursor: 'pointer' }}>
                 Cancel
               </button>
               <button type="submit" disabled={updating} style={{ padding: '0.75rem 2rem', borderRadius: '8px', border: 'none', background: '#111827', color: '#FFF', fontWeight: 600, cursor: 'pointer' }}>

@@ -2,14 +2,16 @@ from datetime import datetime
 import json
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
 from routers.auth import get_current_user_optional, get_current_user
 from routers.notifications import create_notification
+from routers.presentation_analysis import build_presentation_insights
 import models
 import schemas
+from time_utils import to_ist, format_ist, format_ist_iso, now_ist
 
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Debate Session Management"])
@@ -41,7 +43,7 @@ def create_debate_session(
             user_id=current_user.id,
             category="Debate",
             title="Debate Practice Scheduled",
-            message=f"Session on '{debate_session.topic[:50]}' scheduled for {debate_session.scheduled_at.strftime('%b %d, %Y at %H:%M')}."
+            message=f"Session on '{debate_session.topic[:50]}' scheduled for {format_ist(debate_session.scheduled_at, '%b %d, %Y at %H:%M')} IST."
         )
 
     return debate_session
@@ -260,9 +262,10 @@ def complete_debate_session(
 def get_unified_session_history(
     current_user: Optional[models.User] = Depends(get_current_user_optional),
     user_id: Optional[int] = None,
+    session_type: Optional[str] = Query(None, description="Filter by 'debate', 'presentation', or 'all'"),
     db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
-    """Retrieves all sessions across Debate, Speech Analysis, Vocal Matrix, and Agent Simulation."""
+    """Retrieves debate sessions, with optional filtering for presentations or unified audit."""
     target_user_id = current_user.id if current_user else (user_id or 1)
 
     sessions = (
@@ -284,13 +287,26 @@ def get_unified_session_history(
         # Categorize session type cleanly
         fmt = (s.format or "").strip()
         if "Vocal" in fmt:
-            session_type = "Vocal Matrix"
+            session_type_val = "Vocal Matrix"
+        elif "Presentation" in fmt:
+            session_type_val = "Presentation Analysis"
         elif "Speech" in fmt:
-            session_type = "Speech Analysis"
+            session_type_val = "Speech Analysis"
         elif "Simulation" in fmt:
-            session_type = "Agent Simulation"
+            session_type_val = "Agent Simulation"
         else:
-            session_type = "Debate"
+            session_type_val = "Debate"
+
+        is_presentation_item = bool(
+            session_type_val in ["Vocal Matrix", "Presentation Analysis", "Speech Analysis"] or
+            (metric is not None and not sim_turns)
+        )
+
+        filter_mode = (session_type or "debate").strip().lower()
+        if filter_mode == "debate" and is_presentation_item:
+            continue
+        elif filter_mode in ["presentation", "vocal"] and not is_presentation_item:
+            continue
 
         # Tally fallacies and turn metrics if any
         fallacies_count = 0
@@ -363,7 +379,7 @@ def get_unified_session_history(
             "title": s.title,
             "topic": s.topic,
             "format": s.format,
-            "session_type": session_type,
+            "session_type": session_type_val,
             "position": s.assigned_position,
             "status": s.status,
             "score": score_val,
@@ -385,8 +401,8 @@ def get_unified_session_history(
             "evaluator_name": eval_name,
             "fallacies_count": fallacies_count,
             "turns_count": len(sim_turns),
-            "date": s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "Recent",
-            "created_at": s.created_at.isoformat() if s.created_at else datetime.utcnow().isoformat(),
+            "date": format_ist(s.created_at, "%Y-%m-%d %H:%M"),
+            "created_at": format_ist_iso(s.created_at),
             "metrics": {
                 "wpm": metric.speech_pace_wpm if metric else 142.0,
                 "filler_words": metric.filler_words_count if metric else 0,
@@ -480,14 +496,25 @@ def get_session_performance_detail(
 
     eval_name = user_plan.evaluator_name if user_plan and user_plan.evaluator_name else "Debate Coach"
 
+    pres_insights = None
+    if metric:
+        pres_insights = build_presentation_insights(
+            wpm=metric.speech_pace_wpm,
+            filler_count=metric.filler_words_count,
+            filler_list=metric.filler_words_list or "None",
+            confidence=metric.confidence_score,
+            clarity=metric.clarity_score,
+            engagement=metric.engagement_score
+        )
+
     return {
         "session_id": s.id,
         "title": s.title,
         "topic": s.topic,
-        "format": s.format,
-        "position": s.assigned_position,
+        "format": "Presentation Analysis" if (s.format in ["Vocal Matrix", "Presentation Analysis", "Presentation", "Speech Analysis"] or (metric is not None and not sim_turns)) else s.format,
+        "position": "Speaker" if (s.format in ["Vocal Matrix", "Presentation Analysis", "Presentation", "Speech Analysis"] or (metric is not None and not sim_turns)) else s.assigned_position,
         "status": s.status,
-        "date": s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "Recent",
+        "date": format_ist(s.created_at, "%Y-%m-%d %H:%M"),
         "performance_score": score_val,
         "overall_score": score_val,
         "logical_integrity": logic_val,
@@ -495,15 +522,21 @@ def get_session_performance_detail(
         "argument_quality": arg_val,
         "evidence_use": evid_val,
         "communication_skills": comms_val,
-        "overall_feedback": ov_fb,
+        "overall_feedback": pres_insights["summary"] if pres_insights else ov_fb,
         "logical_feedback": lg_fb,
         "rebuttal_feedback": rb_fb,
-        "ai_feedback": perf.ai_feedback if perf and perf.ai_feedback else f"{ov_fb} • {lg_fb} • {rb_fb}",
+        "ai_feedback": pres_insights["ai_feedback"] if pres_insights else (perf.ai_feedback if perf and perf.ai_feedback else f"{ov_fb} • {lg_fb} • {rb_fb}"),
         "coach_grade": c_grade,
         "coach_marks": c_marks,
         "coach_feedback": c_feedback,
         "evaluator_name": eval_name,
-        "is_vocal_matrix": bool(s.format == "Vocal Matrix" or (metric is not None and not sim_turns)),
+        "is_vocal_matrix": bool(s.format in ["Vocal Matrix", "Presentation Analysis", "Presentation", "Speech Analysis"] or (metric is not None and not sim_turns)),
+        "pace_status": pres_insights["pace_status"] if pres_insights else "optimal",
+        "strengths": pres_insights["strengths"] if pres_insights else [],
+        "improvements": pres_insights["improvements"] if pres_insights else [],
+        "pros": pres_insights["pros"] if pres_insights else [],
+        "cons": pres_insights["cons"] if pres_insights else [],
+        "summary": pres_insights["summary"] if pres_insights else ov_fb,
         "metrics": {
             "wpm": metric.speech_pace_wpm if metric else 142.0,
             "speech_pace_wpm": metric.speech_pace_wpm if metric else 142.0,
@@ -512,9 +545,12 @@ def get_session_performance_detail(
             "filler_words_list": metric.filler_words_list if metric else "",
             "confidence": metric.confidence_score if metric else 88.0,
             "confidence_score": metric.confidence_score if metric else 88.0,
+            "confidence_score_10": pres_insights["confidence_score_10"] if pres_insights else 8.8,
             "clarity": metric.clarity_score if metric else 85.0,
             "clarity_score": metric.clarity_score if metric else 85.0,
-            "engagement_score": metric.engagement_score if metric else 75.0
+            "clarity_score_10": pres_insights["clarity_score_10"] if pres_insights else 8.5,
+            "engagement_score": metric.engagement_score if metric else 75.0,
+            "engagement_score_10": pres_insights["engagement_score_10"] if pres_insights else 7.5
         } if metric else None,
         "vocal_metrics": {
             "speech_pace_wpm": metric.speech_pace_wpm if metric else 142.0,
@@ -523,12 +559,14 @@ def get_session_performance_detail(
             "confidence_score": metric.confidence_score if metric else 88.0,
             "clarity_score": metric.clarity_score if metric else 85.0,
             "engagement_score": metric.engagement_score if metric else 75.0,
-            "ai_coach_feedback": (
-                'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.'
-                if (metric and metric.filler_words_count > 3)
-                else ('Incorporate rhythmic cadence changes to emphasize rhetorical pivots.' if (metric and metric.speech_pace_wpm < 120)
-                else 'Superb prosody balance! Your pacing and minimal filler density project command over the debate motion.')
-            ) if metric else "Superb prosody balance! Your pacing and minimal filler density project command over the debate motion."
+            "ai_coach_feedback": pres_insights["ai_feedback"] if pres_insights else (
+                (
+                    'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.'
+                    if (metric and metric.filler_words_count > 3)
+                    else ('Incorporate rhythmic cadence changes to emphasize rhetorical pivots.' if (metric and metric.speech_pace_wpm < 120)
+                    else 'Superb prosody balance! Your pacing and minimal filler density project command over the debate motion.')
+                ) if metric else "Superb prosody balance! Your pacing and minimal filler density project command over the debate motion."
+            )
         } if metric else None,
         "reports": {
             "pdf_url": f"http://localhost:8000/api/v1/reports/export/pdf/{s.id}",

@@ -16,16 +16,6 @@ const authHeaders = () => {
 
 const SAMPLE_SPEECHES = [
   {
-    id: "school_phones",
-    title: "School Mobile Phone Policy",
-    badge: "📱 POLICY BENCHMARK (36.9 WPM)",
-    icon: "📱",
-    duration: 18,
-    defaultTopic: "Should students be allowed to use mobile phones in school?",
-    simpleDescription: "Official benchmark testing presentation clarity and structure when addressing modern student digital policies.",
-    text: "Phones in school should maybe be allowed for some things."
-  },
-  {
     id: "filler",
     title: "High Filler Word Sample",
     badge: "⚠️ PRACTICE PAUSES",
@@ -294,55 +284,30 @@ export default function PresentationPage() {
       const fillerMatches = (speechText || "").match(/\b(um|uh|like|basically|actually|you know|literally|so)\b/gi) || [];
       const fillerCount = fillerMatches.length;
 
-      const isBenchmark = (topic || "").toLowerCase().includes("phone") || (speechText || "").toLowerCase().includes("phone");
-      if (isBenchmark) {
-        setMetrics({
-          speech_pace_wpm: 36.9,
-          pace_status: "slow",
-          filler_words_count: 0,
-          filler_words_list: "None",
-          confidence_score_10: 1.0,
-          clarity_score_10: 1.0,
-          engagement_score_10: 1.0,
-          confidence_score: 10,
-          clarity_score: 10,
-          engagement_score: 10,
-          strengths: ["Shows an intention to address a school-policy issue"],
-          improvements: [
-            "Develop a clear thesis statement about allowing phones in school",
-            "Organize the argument into a logical sequence (e.g., introduction, benefits, counter-arguments, conclusion)",
-            "Eliminate incomplete or fragmented sentences",
-            "Use concrete examples and data to support claims",
-            "Incorporate rhetorical devices such as parallelism or rhetorical questions to keep listeners engaged"
-          ],
-          summary: "The draft is too fragmentary to convey confidence or clarity, and it won't hold an audience's attention. Build a complete, well-structured argument with concrete examples and purposeful language to improve all three metrics."
-        });
-      } else {
-        const conf10 = Math.round(Math.max(1, Math.min(10, 9.5 - fillerCount * 0.8)) * 10) / 10;
-        const clar10 = Math.round(Math.max(1, Math.min(10, wpm >= 130 && wpm <= 160 ? 9.2 : 7.5)) * 10) / 10;
-        const eng10 = Math.round(Math.max(1, Math.min(10, 8.5 - fillerCount * 0.4)) * 10) / 10;
-        setMetrics({
-          speech_pace_wpm: wpm,
-          pace_status: wpm < 110 ? "slow" : wpm > 165 ? "rapid" : "optimal",
-          filler_words_count: fillerCount,
-          filler_words_list: fillerMatches.length > 0 ? fillerMatches.join(', ') : "None",
-          confidence_score_10: conf10,
-          clarity_score_10: clar10,
-          engagement_score_10: eng10,
-          confidence_score: conf10 * 10,
-          clarity_score: clar10 * 10,
-          engagement_score: eng10 * 10,
-          strengths: [
-            fillerCount === 0 ? "Exceptional verbal discipline with zero filler word interruptions" : "Steady verbal delivery and focused speaking posture",
-            wpm >= 130 && wpm <= 160 ? `Optimal keynote pacing (${wpm} WPM)` : `Recognizable presentation structure`
-          ],
-          improvements: [
-            wpm < 110 ? `Increase speaking pace towards 130–155 WPM` : `Maintain balanced pauses between key arguments`,
-            "Support core premises with empirical evidence and verified examples"
-          ],
-          summary: `Your presentation operates at ${wpm} WPM with ${fillerCount} filler words. Focus on refining structure and delivery momentum to maximize audience engagement.`
-        });
-      }
+      const conf10 = Math.round(Math.max(1, Math.min(10, 9.5 - fillerCount * 0.8)) * 10) / 10;
+      const clar10 = Math.round(Math.max(1, Math.min(10, wpm >= 130 && wpm <= 160 ? 9.2 : 7.5)) * 10) / 10;
+      const eng10 = Math.round(Math.max(1, Math.min(10, 8.5 - fillerCount * 0.4)) * 10) / 10;
+      setMetrics({
+        speech_pace_wpm: wpm,
+        pace_status: wpm < 110 ? "slow" : wpm > 165 ? "rapid" : "optimal",
+        filler_words_count: fillerCount,
+        filler_words_list: fillerMatches.length > 0 ? fillerMatches.join(', ') : "None",
+        confidence_score_10: conf10,
+        clarity_score_10: clar10,
+        engagement_score_10: eng10,
+        confidence_score: conf10 * 10,
+        clarity_score: clar10 * 10,
+        engagement_score: eng10 * 10,
+        strengths: [
+          fillerCount === 0 ? "Exceptional verbal discipline with zero filler word interruptions" : "Steady verbal delivery and focused speaking posture",
+          wpm >= 130 && wpm <= 160 ? `Optimal keynote pacing (${wpm} WPM)` : `Recognizable presentation structure`
+        ],
+        improvements: [
+          wpm < 110 ? `Increase speaking pace towards 130–155 WPM` : `Maintain balanced pauses between key arguments`,
+          "Support core premises with empirical evidence and verified examples"
+        ],
+        summary: `Your presentation operates at ${wpm} WPM with ${fillerCount} filler words. Focus on refining structure and delivery momentum to maximize audience engagement.`
+      });
     } finally {
       setLoading(false);
     }
@@ -370,13 +335,6 @@ export default function PresentationPage() {
 
     setActiveSpeaking(id);
     window.speechSynthesis.speak(utterance);
-  };
-
-  const loadSchoolPhoneBenchmark = () => {
-    setTopic("Should students be allowed to use mobile phones in school?");
-    setSpeechText("Phones in school should maybe be allowed for some things.");
-    setDuration(18);
-    setSelectedSampleIndex(0);
   };
 
   const formatTimer = (seconds) => {
@@ -798,23 +756,6 @@ export default function PresentationPage() {
                       SPEECH TRANSCRIPT / SPOKEN TEXT:
                     </label>
                     <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={loadSchoolPhoneBenchmark}
-                        className="btn pa-action-btn"
-                        style={{
-                          background: '#FFF',
-                          border: '1px solid var(--border-light)',
-                          color: '#B91C1C',
-                          fontSize: '0.72rem',
-                          fontWeight: 800,
-                          padding: '0.3rem 0.65rem',
-                          borderRadius: '6px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ⚡ LOAD BENCHMARK (36.9 WPM)
-                      </button>
                       {speechRecognitionSupported && isRecording && (
                         <span style={{ fontSize: '0.75rem', color: '#10B981', fontFamily: 'var(--font-mono)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
                           <MicIcon size={14} active={true} /> Live Voice Transcribing...
@@ -1071,6 +1012,83 @@ export default function PresentationPage() {
                         </div>
                       </div>
 
+                      {/* Rhetorical Pros & Cons Cards */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                        {/* Pros Card */}
+                        <div 
+                          className="pa-hover-card" 
+                          style={{ 
+                            padding: '1.5rem', 
+                            border: '1px solid var(--border-light)', 
+                            borderRadius: '14px', 
+                            background: '#FFF',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+                          }}
+                        >
+                          <div className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                            RHETORICAL PROS
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {(metrics.pros && metrics.pros.length > 0 ? metrics.pros : [
+                              "Clear vocal delivery that conveys key premise and main speaking objective.",
+                              "Direct articulate delivery with recognizable structural progression."
+                            ]).map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                                <span style={{ color: '#059669', fontWeight: 800, marginTop: '-1px' }}>✓</span>
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Cons Card */}
+                        <div 
+                          className="pa-hover-card" 
+                          style={{ 
+                            padding: '1.5rem', 
+                            border: '1px solid var(--border-light)', 
+                            borderRadius: '14px', 
+                            background: '#FFF',
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.02)'
+                          }}
+                        >
+                          <div className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                            FRICTION POINTS &amp; CONS
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            {(metrics.cons && metrics.cons.length > 0 ? metrics.cons : [
+                              "Premise-to-conclusion transitions could benefit from tighter deductive connective phrasing.",
+                              "Minor opportunities to introduce tactical 2-second rhetorical pauses before major assertions."
+                            ]).map((item, idx) => (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                                <span style={{ color: '#D97706', fontWeight: 800, marginTop: '-1px' }}>⚠</span>
+                                <span>{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* AI Coach Feedback Card */}
+                      {metrics.ai_feedback && (
+                        <div 
+                          style={{ 
+                            background: '#0F172A', 
+                            color: '#FFF', 
+                            borderRadius: '14px', 
+                            padding: '1.5rem 1.75rem', 
+                            boxShadow: '0 4px 16px rgba(0,0,0,0.05)' 
+                          }}
+                        >
+                          <div className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#EF4444', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
+                            AI COACH FEEDBACK:
+                          </div>
+                          <p style={{ fontSize: '0.95rem', color: '#F1F5F9', lineHeight: '1.6', margin: 0 }}>
+                            {metrics.ai_feedback}
+                          </p>
+                        </div>
+                      )}
+
                       {/* Summary Card with Read Aloud TTS */}
                       <div 
                         className="pa-hover-card" 
@@ -1129,11 +1147,11 @@ export default function PresentationPage() {
                           Clear & Reset Studio
                         </button>
                         <Link
-                          href="/dashboard"
+                          href="/dashboard?tab=presentations"
                           className="btn btn-red pa-action-btn"
                           style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', fontSize: '0.8rem', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
-                          View in Dashboard →
+                          View Dashboard →
                         </Link>
                       </div>
 

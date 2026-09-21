@@ -114,8 +114,12 @@ class PresentationMetricResponse(BaseModel):
     confidence_score_10: Optional[float] = None
     clarity_score_10: Optional[float] = None
     engagement_score_10: Optional[float] = None
+    overall_score: Optional[float] = None
     strengths: Optional[List[str]] = None
     improvements: Optional[List[str]] = None
+    pros: Optional[List[str]] = None
+    cons: Optional[List[str]] = None
+    ai_feedback: Optional[str] = None
     summary: Optional[str] = None
 
 

@@ -1,4 +1,4 @@
-﻿from typing import Optional, List
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -7,6 +7,7 @@ from database import get_db
 from routers.auth import get_current_user_optional, get_current_user
 import models
 import schemas
+from time_utils import format_ist, to_ist
 
 router = APIRouter(prefix="/api/v1/notifications", tags=["Notification & Engagement System"])
 
@@ -49,7 +50,7 @@ def get_user_notifications(
     ).order_by(models.DebateSession.scheduled_at.asc()).all()
 
     for idx, sess in enumerate(scheduled_sessions):
-        scheduled_time_str = sess.scheduled_at.strftime('%b %d, %Y at %H:%M') if sess.scheduled_at else "Upcoming"
+        scheduled_time_str = format_ist(sess.scheduled_at, '%b %d, %Y at %H:%M') if sess.scheduled_at else "Upcoming"
         notifications_list.append({
             "id": 1000 + sess.id,
             "category": "Debate",
@@ -73,7 +74,7 @@ def get_user_notifications(
         elif time_diff.total_seconds() < 86400:
             time_str = f"{int(time_diff.total_seconds() // 3600)}h ago"
         else:
-            time_str = notif.created_at.strftime('%b %d, %Y')
+            time_str = format_ist(notif.created_at, '%b %d, %Y')
 
         notifications_list.append({
             "id": notif.id,

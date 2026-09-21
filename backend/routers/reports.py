@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from routers.auth import get_current_user_optional, decode_access_token
 import models
+from time_utils import format_ist, now_ist, to_ist
 
 # ReportLab imports for standard compliant PDF generation
 from reportlab.lib.pagesizes import letter
@@ -203,7 +204,7 @@ def export_pdf_report(
     elements.append(Spacer(1, 4))
     elements.append(Paragraph("DEBATE & SPEECH PERFORMANCE AUDIT", st['title']))
     elements.append(Spacer(1, 4))
-    elements.append(Paragraph(f"Official Performance Scorecard • Session ID: #{session.id} • Generated: {datetime.utcnow().strftime('%B %d, %Y')}", st['body']))
+    elements.append(Paragraph(f"Official Performance Scorecard • Session ID: #{session.id} • Generated: {format_ist(now_ist(), '%B %d, %Y at %H:%M IST')}", st['body']))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
 
     # Session Meta Table
@@ -223,8 +224,8 @@ def export_pdf_report(
         [
             Paragraph("<b>Session Status:</b>", st['meta_label']),
             Paragraph(session.status or "Completed", st['meta_val']),
-            Paragraph("<b>Date Recorded:</b>", st['meta_label']),
-            Paragraph(session.created_at.strftime('%Y-%m-%d %H:%M') if session.created_at else 'Recent', st['meta_val'])
+            Paragraph("<b>Date Recorded (IST):</b>", st['meta_label']),
+            Paragraph(format_ist(session.created_at, '%Y-%m-%d %H:%M IST'), st['meta_val'])
         ]
     ]
     meta_table = Table(meta_data, colWidths=[80, 240, 75, 145])
@@ -460,7 +461,7 @@ def export_excel_report(
     topic_clean = session.topic.replace('"', '""')
     csv_lines = [
         "LOGOS.AI RHETORICAL PERFORMANCE ENGINE - SESSION METRIC EXPORT",
-        f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Export Timestamp,{format_ist(now_ist(), '%Y-%m-%d %H:%M:%S IST')}",
         f"Session ID,{session.id}",
         f"Session Topic,\"{topic_clean}\"",
         f"Format,{session.format}",
@@ -711,7 +712,7 @@ def export_coaching_pdf_report(
         for fb in feedbacks:
             fb_box = [
                 [
-                    Paragraph(f"<b>{fb.title} ({fb.created_at.strftime('%Y-%m-%d')}):</b> {fb.message}", st['body'])
+                    Paragraph(f"<b>{fb.title} ({format_ist(fb.created_at, '%Y-%m-%d %H:%M')}):</b> {fb.message}", st['body'])
                 ]
             ]
             fbt = Table(fb_box, colWidths=[540])
@@ -867,7 +868,7 @@ def export_coach_roster_pdf(
         if feedbacks:
             elements.append(Paragraph("2. INSTRUCTOR DIRECTIVES & FEEDBACK LOG", st['h2']))
             for fb in feedbacks:
-                elements.append(Paragraph(f"• <b>{fb.title} ({fb.created_at.strftime('%b %d, %Y')}):</b> {fb.message}", st['body']))
+                elements.append(Paragraph(f"• <b>{fb.title} ({format_ist(fb.created_at, '%b %d, %Y %H:%M')}):</b> {fb.message}", st['body']))
                 elements.append(Spacer(1, 4))
         else:
             elements.append(Paragraph("2. INSTRUCTOR DIRECTIVES", st['h2']))
@@ -989,7 +990,7 @@ def export_coach_roster_excel(
             f"LOGOS.AI STUDENT PERFORMANCE METRICS MATRIX - {target_student.full_name.upper()}",
             f"Evaluator / Instructor,{coach.full_name} ({coach.email})",
             f"Student Email,{target_student.email}",
-            f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Export Timestamp,{format_ist(now_ist(), '%Y-%m-%d %H:%M:%S IST')}",
             f"Total Completed Sessions,{len(sessions)}",
             "",
             "SESSION HISTORY BREAKDOWN",
@@ -1004,7 +1005,7 @@ def export_coach_roster_excel(
             rebut_val = round(perf.rebuttal_effectiveness, 1) if perf else "N/A"
             wpm_val = round(metric.speech_pace_wpm, 1) if metric else "N/A"
             filler_val = metric.filler_words_count if metric else "N/A"
-            date_val = s.created_at.strftime("%Y-%m-%d %H:%M") if s.created_at else "Recent"
+            date_val = format_ist(s.created_at, "%Y-%m-%d %H:%M IST")
             csv_lines.append(f"{s.id},\"{topic_clean}\",{s.format},{s.assigned_position},{score_val},{logic_val},{rebut_val},{wpm_val},{filler_val},{date_val}")
 
         if feedbacks:
@@ -1013,7 +1014,7 @@ def export_coach_roster_excel(
             csv_lines.append("Directive Date,Title,Message")
             for fb in feedbacks:
                 msg_clean = fb.message.replace('"', '""')
-                csv_lines.append(f"{fb.created_at.strftime('%Y-%m-%d %H:%M')},\"{fb.title}\",\"{msg_clean}\"")
+                csv_lines.append(f"{format_ist(fb.created_at, '%Y-%m-%d %H:%M IST')},\"{fb.title}\",\"{msg_clean}\"")
 
         filename = f"LogosAI_Student_Metrics_{target_student.id}.csv"
     else:
@@ -1028,7 +1029,7 @@ def export_coach_roster_excel(
         csv_lines = [
             "LOGOS.AI CLASSROOM & COHORT EXECUTIVE METRICS ROSTER",
             f"Instructor,{coach.full_name} ({coach.email})",
-            f"Export Timestamp,{datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Export Timestamp,{format_ist(now_ist(), '%Y-%m-%d %H:%M:%S IST')}",
             f"Total Enrolled Students,{len(students)}",
             "",
             "Student ID,Student Full Name,Email,Role,Experience Level,Active Topic,Total Sessions,Grade,Average Score (%),Stated Goals",
@@ -1111,7 +1112,7 @@ def export_coach_coaching_pdf(
     elements.append(Spacer(1, 4))
     elements.append(Paragraph("MASTER COACHING & INTERVENTION PLAN", st['title']))
     elements.append(Spacer(1, 4))
-    elements.append(Paragraph(f"Coach: {coach.full_name} ({coach.email}) • Active Students: {len(students)} • Date: {datetime.utcnow().strftime('%B %d, %Y')}", st['body']))
+    elements.append(Paragraph(f"Coach: {coach.full_name} ({coach.email}) • Active Students: {len(students)} • Date: {format_ist(now_ist(), '%B %d, %Y at %H:%M IST')}", st['body']))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#111827'), spaceBefore=8, spaceAfter=12))
 
     elements.append(Paragraph("1. COHORT RHETORICAL PAIN POINTS", st['h2']))
@@ -1133,7 +1134,7 @@ def export_coach_coaching_pdf(
     if all_feedbacks:
         fb_data = [
             [
-                Paragraph("<b>Date</b>", st['meta_label']),
+                Paragraph("<b>Date (IST)</b>", st['meta_label']),
                 Paragraph("<b>Target Directive</b>", st['meta_label']),
                 Paragraph("<b>Guidance Dispatched</b>", st['meta_label'])
             ]
@@ -1142,7 +1143,7 @@ def export_coach_coaching_pdf(
             student_target = db.query(models.User).filter(models.User.id == fb.user_id).first()
             st_name = student_target.full_name if student_target else f"Student #{fb.user_id}"
             fb_data.append([
-                Paragraph(fb.created_at.strftime('%Y-%m-%d'), st['body']),
+                Paragraph(format_ist(fb.created_at, '%Y-%m-%d %H:%M'), st['body']),
                 Paragraph(f"To: {st_name}<br/>{fb.title}", st['body']),
                 Paragraph(fb.message, st['body'])
             ])

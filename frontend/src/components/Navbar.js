@@ -13,6 +13,7 @@ export default function Navbar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingRoute, setPendingRoute] = useState(null);
+  const [userInitial, setUserInitial] = useState('D');
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -20,6 +21,21 @@ export default function Navbar() {
       const token = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
       setIsLoggedIn(!!token);
       if (token) {
+        try {
+          const cachedName = localStorage.getItem('logos_ai_user_name');
+          if (cachedName && cachedName.trim() && !cachedName.toLowerCase().includes('hardwill')) {
+            setUserInitial(cachedName.trim().charAt(0).toUpperCase());
+          } else {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const resolvedName = payload.full_name || (payload.sub ? (payload.sub.toLowerCase().includes('dayan') ? 'Dayan' : payload.sub.split('@')[0]) : 'User');
+            setUserInitial(resolvedName.trim().charAt(0).toUpperCase());
+          }
+        } catch (e) {
+          const cachedName = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_user_name') : null;
+          if (cachedName && cachedName.trim()) {
+            setUserInitial(cachedName.trim().charAt(0).toUpperCase());
+          }
+        }
         fetchNotifications();
       }
     };
@@ -100,16 +116,6 @@ export default function Navbar() {
     }
   };
 
-  const handleEnginesClick = (e) => {
-    if (pathname === '/') {
-      e.preventDefault();
-      const el = document.getElementById('engines');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  };
-
   const handleProtectedNav = (e, targetRoute) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
     if (!token) {
@@ -136,15 +142,8 @@ export default function Navbar() {
           LOGOS.AI
         </Link>
 
-        {/* Nav Links: ENGINES, DEBATE SIMULATION, PRESENTATION-ANALYSIS, etc. */}
+        {/* Nav Links: DEBATE SIMULATION, PRESENTATION-ANALYSIS, ARGUMENT-ANALYSIS, FALLACY-DETECTOR, COUNTER-ARGUMENT */}
         <div className="nav-links" style={{ display: 'flex', gap: '1.2rem', alignItems: 'center' }}>
-          <Link 
-            href="/#engines" 
-            onClick={handleEnginesClick}
-            className="nav-link"
-          >
-            ENGINES
-          </Link>
           <Link 
             href="/simulation" 
             onClick={(e) => handleProtectedNav(e, '/simulation')}
@@ -177,31 +176,9 @@ export default function Navbar() {
           >
             COUNTER-ARGUMENT
           </Link>
-          <Link 
-            href="/dashboard" 
-            onClick={(e) => handleProtectedNav(e, '/dashboard')}
-            style={{
-              background: '#D90429',
-              color: '#FFFFFF',
-              padding: '0.45rem 1.1rem',
-              borderRadius: '8px',
-              fontWeight: 800,
-              fontSize: '0.78rem',
-              letterSpacing: '0.05em',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              boxShadow: '0 2px 8px rgba(217, 4, 41, 0.25)',
-              transition: 'all 0.18s ease'
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#B00320'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#D90429'; e.currentTarget.style.transform = 'translateY(0)'; }}
-          >
-            DASHBOARD
-          </Link>
         </div>
 
-        {/* Actions / Notifications */}
+        {/* Actions / Notifications & Red Dashboard Box */}
         <div className="nav-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           
           {/* Interactive Notification Bell */}
@@ -274,14 +251,49 @@ export default function Navbar() {
             </div>
           )}
 
+          {/* Red Dashboard Box with User Initial Squircle (Replaces Logout next to bell) */}
           {isLoggedIn ? (
-            <button 
-              onClick={handleLogout}
-              className="btn btn-login" 
-              style={{ padding: '0.55rem 1.25rem', border: '1px solid #e5e5eb', borderRadius: '8px', background: 'transparent', color: '#000', textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+            <Link 
+              href="/dashboard"
+              className="dash-action-btn"
+              style={{
+                background: '#D90429',
+                color: '#FFFFFF',
+                padding: '0.45rem 1.1rem 0.45rem 0.55rem',
+                borderRadius: '8px',
+                fontWeight: 800,
+                fontSize: '0.8rem',
+                letterSpacing: '0.04em',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                boxShadow: '0 2px 8px rgba(217, 4, 41, 0.25)',
+                transition: 'all 0.18s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#B00320'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#D90429'; }}
+              title="Open User Dashboard"
             >
-              Logout
-            </button>
+              {/* User Initial Squircle with curved edges */}
+              <span style={{
+                width: '26px',
+                height: '26px',
+                borderRadius: '6px',
+                background: '#FFFFFF',
+                color: '#D90429',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 900,
+                fontSize: '0.9rem',
+                fontFamily: "'Inter', sans-serif",
+                lineHeight: 1
+              }}>
+                {userInitial}
+              </span>
+              <span>DASHBOARD</span>
+            </Link>
           ) : (
             <>
               <button 

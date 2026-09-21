@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import SpeakerIcon from '../../../components/SpeakerIcon';
 
 function PerformanceDetailContent() {
   const router = useRouter();
@@ -14,6 +15,28 @@ function PerformanceDetailContent() {
   const [downloading, setDownloading] = useState(null);
   const [reportMsg, setReportMsg] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
+  const [activeSpeakingKey, setActiveSpeakingKey] = useState(null);
+
+  const handleSpeak = (text, key) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert("Text-to-speech is not supported in this browser.");
+      return;
+    }
+    if (activeSpeakingKey === key) {
+      window.speechSynthesis.cancel();
+      setActiveSpeakingKey(null);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.lang = "en-US";
+    utterance.onend = () => setActiveSpeakingKey(null);
+    utterance.onerror = () => setActiveSpeakingKey(null);
+    setActiveSpeakingKey(key);
+    window.speechSynthesis.speak(utterance);
+  };
 
   const getToken = () => {
     return typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
@@ -212,8 +235,12 @@ function PerformanceDetailContent() {
   const isVocalMatrix = Boolean(
     p.is_vocal_matrix || 
     p.format === 'Vocal Matrix' || 
+    p.format === 'Presentation Analysis' || 
+    p.format === 'Presentation' || 
     p.session_type === 'Vocal Matrix' || 
-    searchParams.get('type') === 'vocal'
+    p.session_type === 'Presentation Analysis' || 
+    searchParams.get('type') === 'vocal' ||
+    searchParams.get('type') === 'presentation'
   );
 
   const vm = p.vocal_metrics || p.metrics || {};
@@ -222,7 +249,30 @@ function PerformanceDetailContent() {
   const fillerList = vm.filler_words_list || (typeof vm.filler_words === 'string' ? vm.filler_words : "you know:1, basically:1, actually:1, literally:1, like:1, um:1, uh:1, so:1");
   const confidenceVal = vm.confidence_score !== undefined ? vm.confidence_score : (p.metrics?.confidence ?? 30.0);
   const clarityVal = vm.clarity_score !== undefined ? vm.clarity_score : (p.metrics?.clarity ?? 46.4);
-  const aiCoachFeedback = vm.ai_coach_feedback || p.ai_coach_feedback || 'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.';
+  const engagementVal = vm.engagement_score !== undefined ? vm.engagement_score : (p.metrics?.engagement_score ?? 80.0);
+  const confidence10 = vm.confidence_score_10 !== undefined ? vm.confidence_score_10 : (p.metrics?.confidence_score_10 !== undefined ? p.metrics.confidence_score_10 : Number((confidenceVal / 10).toFixed(1)));
+  const clarity10 = vm.clarity_score_10 !== undefined ? vm.clarity_score_10 : (p.metrics?.clarity_score_10 !== undefined ? p.metrics.clarity_score_10 : Number((clarityVal / 10).toFixed(1)));
+  const engagement10 = vm.engagement_score_10 !== undefined ? vm.engagement_score_10 : (p.metrics?.engagement_score_10 !== undefined ? p.metrics.engagement_score_10 : Number((engagementVal / 10).toFixed(1)));
+  const overallScoreVal = p.overall_score || p.performance_score || Math.round(confidenceVal * 0.5 + clarityVal * 0.5);
+  const strengthsList = (p.strengths && p.strengths.length > 0) ? p.strengths : (vm.strengths || [
+    "Establishes a recognizable presentation premise and core speaking intent",
+    "Dynamic vocal variety and engaging rhetorical tone"
+  ]);
+  const improvementsList = (p.improvements && p.improvements.length > 0) ? p.improvements : (vm.improvements || [
+    "Increase speaking rate toward the 130-155 WPM sweet spot",
+    "Strengthen logical transitions between premise, empirical evidence, and concluding impact",
+    "Anchor principal claims with concrete statistics or authoritative evidence"
+  ]);
+  const prosList = (p.pros && p.pros.length > 0) ? p.pros : (vm.pros || [
+    `Clear vocal delivery that conveys key premise and main speaking objective.`,
+    "Direct articulate delivery with recognizable structural progression."
+  ]);
+  const consList = (p.cons && p.cons.length > 0) ? p.cons : (vm.cons || [
+    "Premise-to-conclusion transitions could benefit from tighter deductive connective phrasing.",
+    "Minor opportunities to introduce tactical 2-second rhetorical pauses before major assertions."
+  ]);
+  const summaryText = p.summary || p.overall_feedback || "Your delivery operates with structured communication. To maximize rhetorical impact, focus on refining speech momentum and supporting core arguments with verified evidence to elevate confidence and audience engagement.";
+  const aiCoachFeedback = p.ai_feedback || vm.ai_coach_feedback || p.ai_coach_feedback || 'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.';
 
   // 5 Rhetorical Skill Matrix items for this specific session
   const skillItems = [
@@ -302,7 +352,7 @@ function PerformanceDetailContent() {
       {/* Top Breadcrumb & Navigation */}
       <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link 
-          href="/dashboard" 
+          href={isVocalMatrix ? "/dashboard?tab=presentations" : "/dashboard?tab=debates"} 
           style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
@@ -316,7 +366,7 @@ function PerformanceDetailContent() {
             borderRadius: '8px'
           }}
         >
-          {isVocalMatrix ? '← Back to Dashboard' : '← Back to Debate History'}
+          {isVocalMatrix ? '← Back to Presentation History' : '← Back to Debate History'}
         </Link>
         <span style={{ fontSize: '0.78rem', color: '#6B7280', fontWeight: 600 }}>
           Session ID {p.session_id} • Audited by Logos.AI
@@ -347,84 +397,266 @@ function PerformanceDetailContent() {
             </h1>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.84rem', color: '#4B5563', borderTop: '1px solid #F3F4F6', paddingTop: '0.9rem' }}>
-              <div>Date Completed: <strong style={{ color: '#111827' }}>{p.date}</strong></div>
+              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date}</strong></div>
               <div>Status: <strong style={{ color: '#059669' }}>{p.status || 'Completed'}</strong></div>
               <div>Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong></div>
             </div>
           </div>
 
-          {/* 1. SPEECH PACE (WPM) Card */}
-          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em' }}>
-                SPEECH PACE (WPM)
+          {/* 1. TOP TELEMETRY METRICS: PACE, FILLER WORDS, OVERALL SCORE */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.25rem', marginBottom: '1.5rem' }}>
+            
+            {/* Speech Pace Card */}
+            <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  SPEECH PACE
+                </div>
+                {speechPace < 130 || speechPace > 165 ? (
+                  <span style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.6rem', borderRadius: '6px' }}>
+                    ⚡ Adjust Cadence
+                  </span>
+                ) : (
+                  <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.6rem', borderRadius: '6px' }}>
+                    ✓ Optimal Range
+                  </span>
+                )}
               </div>
-              {speechPace < 130 || speechPace > 165 ? (
-                <span style={{ background: '#FEF2F2', color: '#DC2626', fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.75rem', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                  ⚡ Adjust Cadence
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.4rem 0' }}>
+                <span className="font-display" style={{ fontSize: '2.8rem', fontWeight: 900, color: '#111827', lineHeight: 1 }}>
+                  {speechPace}
                 </span>
-              ) : (
-                <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.8rem', fontWeight: 800, padding: '0.35rem 0.75rem', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                  ✓ Optimal Range
-                </span>
-              )}
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#6B7280' }}>WPM</span>
+              </div>
+              <p style={{ fontSize: '0.86rem', color: '#4B5563', margin: 0, lineHeight: '1.45' }}>
+                {speechPace < 130
+                  ? "Pace is measured below target. Elevate cadence toward 130-155 WPM."
+                  : speechPace > 165
+                  ? "Pace exceeds conversational sweet spot. Introduce tactical 2-second micro-pauses."
+                  : "Within optimal keynote debate range (130-160 WPM)."}
+              </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', margin: '0.6rem 0 0.5rem' }}>
-              <span className="font-display" style={{ fontSize: '3.4rem', fontWeight: 900, color: '#111827', lineHeight: 1 }}>
-                {speechPace}
+
+            {/* Filler Words Card */}
+            <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+              <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                FILLER WORDS
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.4rem 0' }}>
+                <span className="font-display" style={{ fontSize: '2.8rem', fontWeight: 900, color: fillerCount > 2 ? '#DC2626' : '#059669', lineHeight: 1 }}>
+                  {fillerCount}
+                </span>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#6B7280' }}>detected</span>
+              </div>
+              <p style={{ fontSize: '0.86rem', color: '#4B5563', margin: 0, lineHeight: '1.45', wordBreak: 'break-word' }}>
+                <strong style={{ color: '#111827' }}>Breakdown:</strong> {fillerList || 'zero filler words detected'}
+              </p>
+            </div>
+
+            {/* Overall Score Card */}
+            <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+              <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.4rem' }}>
+                OVERALL SCORE
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.4rem 0' }}>
+                <span className="font-display" style={{ fontSize: '2.8rem', fontWeight: 900, color: '#D90429', lineHeight: 1 }}>
+                  {overallScoreVal}%
+                </span>
+              </div>
+              <p style={{ fontSize: '0.86rem', color: '#4B5563', margin: 0, lineHeight: '1.45' }}>
+                Composite delivery rating evaluated across confidence, vocal clarity, pacing, and engagement.
+              </p>
+            </div>
+
+          </div>
+
+          {/* 2. PRESENTATION DELIVERY GRAPHS (1.0 - 10.0 Scale) */}
+          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid #F3F4F6', paddingBottom: '0.75rem' }}>
+              <div>
+                <span className="font-mono text-muted" style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  DELIVERY DYNAMICS &amp; VOCAL METRICS
+                </span>
+                <h3 className="font-display" style={{ fontSize: '1.25rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0 0', color: '#111827' }}>
+                  PRESENTATION GRAPHS
+                </h3>
+              </div>
+              <span className="font-mono" style={{ fontSize: '0.78rem', background: '#F3F4F6', color: '#4B5563', padding: '0.3rem 0.65rem', borderRadius: '6px', fontWeight: 700 }}>
+                1.0 – 10.0 SCALE
               </span>
-              <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#4B5563' }}>Words Per Minute</span>
             </div>
-            <p style={{ fontSize: '0.92rem', color: '#4B5563', margin: 0, lineHeight: '1.5' }}>
-              {speechPace < 130
-                ? "Your pace is slightly slow. Pick up cadence to maintain audience engagement."
-                : speechPace > 165
-                ? "Your pace is slightly rapid. Introduce strategic micro-pauses for clarity."
-                : "Your pace is within the optimal conversational debate window (130-160 WPM)."}
-            </p>
+
+            {/* Confidence Metric Row */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                  CONFIDENCE
+                </span>
+                <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                  {confidence10.toFixed(1)} <span style={{ fontSize: '0.78rem', color: '#6B7280', fontWeight: 600 }}>/ 10 ({confidenceVal}%)</span>
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '10px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${Math.min(100, Math.max(5, (confidence10 / 10) * 100))}%`,
+                  height: '100%',
+                  background: '#F97316',
+                  borderRadius: '9999px',
+                  transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}></div>
+              </div>
+            </div>
+
+            {/* Clarity Metric Row */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                  VOCAL CLARITY
+                </span>
+                <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                  {clarity10.toFixed(1)} <span style={{ fontSize: '0.78rem', color: '#6B7280', fontWeight: 600 }}>/ 10 ({clarityVal}%)</span>
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '10px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${Math.min(100, Math.max(5, (clarity10 / 10) * 100))}%`,
+                  height: '100%',
+                  background: '#F97316',
+                  borderRadius: '9999px',
+                  transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}></div>
+              </div>
+            </div>
+
+            {/* Engagement Metric Row */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.45rem' }}>
+                <span className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#374151', letterSpacing: '0.05em' }}>
+                  AUDIENCE ENGAGEMENT
+                </span>
+                <span className="font-mono" style={{ fontSize: '0.9rem', fontWeight: 800, color: '#111827' }}>
+                  {engagement10.toFixed(1)} <span style={{ fontSize: '0.78rem', color: '#6B7280', fontWeight: 600 }}>/ 10 ({engagementVal}%)</span>
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '10px', background: '#F3F4F6', borderRadius: '9999px', overflow: 'hidden' }}>
+                <div style={{
+                  width: `${Math.min(100, Math.max(5, (engagement10 / 10) * 100))}%`,
+                  height: '100%',
+                  background: '#F97316',
+                  borderRadius: '9999px',
+                  transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}></div>
+              </div>
+            </div>
           </div>
 
-          {/* 2. FILLER WORDS DETECTED Card */}
-          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-            <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-              FILLER WORDS DETECTED
-            </div>
-            <div className="font-display" style={{ fontSize: '3.4rem', fontWeight: 900, color: fillerCount > 3 ? '#DC2626' : '#059669', lineHeight: 1, margin: '0.6rem 0 1rem' }}>
-              {fillerCount}
-            </div>
-            <div style={{ fontFamily: 'monospace', fontSize: '0.88rem', color: '#374151', lineHeight: '1.6' }}>
-              <strong style={{ color: '#111827' }}>Breakdown:</strong> {fillerList}
-            </div>
-          </div>
-
-          {/* 3. CONFIDENCE & VOCAL CLARITY Dual Meters */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          {/* 3. SIDE-BY-SIDE STRENGTHS & IMPROVEMENTS */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            {/* Strengths Card */}
             <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-              <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                CONFIDENCE
+              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                STRENGTHS
               </div>
-              <div className="font-display" style={{ fontSize: '3.4rem', fontWeight: 900, color: '#DC2626', lineHeight: 1, margin: '0.6rem 0 0' }}>
-                {confidenceVal}%
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {strengthsList.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                    <span style={{ color: '#059669', fontWeight: 800, marginTop: '-1px' }}>•</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
+            {/* Improvements Card */}
             <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
-              <div className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-                VOCAL CLARITY
+              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#D90429', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                IMPROVEMENTS
               </div>
-              <div className="font-display" style={{ fontSize: '3.4rem', fontWeight: 900, color: '#D97706', lineHeight: 1, margin: '0.6rem 0 0' }}>
-                {clarityVal}%
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {improvementsList.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                    <span style={{ color: '#D90429', fontWeight: 800, marginTop: '-1px' }}>•</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* 4. AI COACH FEEDBACK Card (Dark Container matching screenshot) */}
-          <div className="perf-interactive-box-dark" style={{ background: '#0F172A', color: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+          {/* 4. SIDE-BY-SIDE RHETORICAL PROS & CONS */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            {/* Pros Card */}
+            <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                RHETORICAL PROS
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {prosList.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                    <span style={{ color: '#059669', fontWeight: 800, marginTop: '-1px' }}>✓</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cons Card */}
+            <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+              <div className="font-mono" style={{ fontSize: '0.82rem', fontWeight: 800, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.85rem' }}>
+                FRICTION POINTS &amp; CONS
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                {consList.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.65rem', fontSize: '0.9rem', color: '#1F2937', lineHeight: '1.55' }}>
+                    <span style={{ color: '#D97706', fontWeight: 800, marginTop: '-1px' }}>⚠</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 5. AI COACH FEEDBACK Card (Dark Container) */}
+          <div className="perf-interactive-box-dark" style={{ background: '#0F172A', color: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
             <div className="font-mono" style={{ fontSize: '0.8rem', fontWeight: 800, color: '#EF4444', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
               AI COACH FEEDBACK:
             </div>
             <p style={{ fontSize: '0.98rem', color: '#F1F5F9', lineHeight: '1.6', margin: 0 }}>
               {aiCoachFeedback}
+            </p>
+          </div>
+
+          {/* 6. AI PROSODY DIAGNOSIS SUMMARY Card with TTS */}
+          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '1.75rem 2rem', marginBottom: '2rem', boxShadow: '0 4px 14px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <span className="font-mono text-muted" style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                AI PROSODY DIAGNOSIS SUMMARY
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSpeak(summaryText, 'vocal_summary')}
+                className="btn"
+                style={{
+                  background: activeSpeakingKey === 'vocal_summary' ? '#FEF2F2' : '#F9FAFB',
+                  border: activeSpeakingKey === 'vocal_summary' ? '1px solid #D90429' : '1px solid #E5E7EB',
+                  color: activeSpeakingKey === 'vocal_summary' ? '#D90429' : '#4B5563',
+                  padding: '0.35rem 0.75rem',
+                  fontSize: '0.75rem',
+                  gap: '0.4rem',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                  borderRadius: '6px',
+                  fontWeight: 700
+                }}
+                title="Read summary aloud"
+              >
+                <SpeakerIcon size={14} active={activeSpeakingKey === 'vocal_summary'} />
+                <span>{activeSpeakingKey === 'vocal_summary' ? 'STOP AUDIO' : 'READ SUMMARY'}</span>
+              </button>
+            </div>
+            <p style={{ fontSize: '0.95rem', color: '#374151', lineHeight: '1.65', margin: 0 }}>
+              {summaryText}
             </p>
           </div>
 
@@ -595,7 +827,7 @@ function PerformanceDetailContent() {
             </h1>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.84rem', color: '#4B5563', borderTop: '1px solid #F3F4F6', paddingTop: '0.9rem' }}>
-              <div>Date Completed: <strong style={{ color: '#111827' }}>{p.date}</strong></div>
+              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date}</strong></div>
               <div>Status: <strong style={{ color: '#059669' }}>{p.status || 'Completed'}</strong></div>
               <div>Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong></div>
             </div>

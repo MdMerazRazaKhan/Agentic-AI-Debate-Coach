@@ -585,16 +585,34 @@ export default function FallacyDetectorPage() {
               textAlign: "center",
               boxShadow: "0 10px 30px rgba(0, 0, 0, 0.03)"
             }}>
-              <div style={{
-                fontSize: "0.85rem",
-                fontWeight: 800,
-                letterSpacing: "0.08em",
-                color: "var(--text-secondary)",
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                marginBottom: "0.5rem"
-              }}>
-                CREDIBILITY ASSESSMENT
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem", marginBottom: "0.6rem", flexWrap: "wrap" }}>
+                <div style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  color: "var(--text-secondary)",
+                  fontFamily: "var(--font-mono)",
+                  textTransform: "uppercase"
+                }}>
+                  CREDIBILITY ASSESSMENT
+                </div>
+                {(results.ai_verified || results.verification_status) && (
+                  <span style={{
+                    fontSize: "0.68rem",
+                    fontWeight: 800,
+                    fontFamily: "var(--font-mono)",
+                    background: "#ECFDF5",
+                    color: "#065F46",
+                    padding: "0.15rem 0.55rem",
+                    borderRadius: "9999px",
+                    border: "1px solid #A7F3D0",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.25rem"
+                  }}>
+                    <span>✓</span> AI VERIFIED
+                  </span>
+                )}
               </div>
 
               <div style={{
@@ -801,15 +819,34 @@ export default function FallacyDetectorPage() {
                 paddingBottom: "0.85rem",
                 marginBottom: "1.25rem"
               }}>
-                <div style={{
-                  fontSize: "0.85rem",
-                  fontWeight: 800,
-                  letterSpacing: "0.08em",
-                  color: "#111827",
-                  fontFamily: "var(--font-mono)",
-                  textTransform: "uppercase"
-                }}>
-                  REASONING ANALYSIS
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+                  <div style={{
+                    fontSize: "0.85rem",
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    color: "#111827",
+                    fontFamily: "var(--font-mono)",
+                    textTransform: "uppercase"
+                  }}>
+                    REASONING ANALYSIS
+                  </div>
+                  {(results.ai_verified || results.verification_status) && (
+                    <span style={{
+                      fontSize: "0.68rem",
+                      fontWeight: 800,
+                      fontFamily: "var(--font-mono)",
+                      background: "#F0FDF4",
+                      color: "#166534",
+                      padding: "0.15rem 0.55rem",
+                      borderRadius: "9999px",
+                      border: "1px solid #BBF7D0",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.25rem"
+                    }}>
+                      <span>✓</span> {results.verification_status || "AI Verified"}
+                    </span>
+                  )}
                 </div>
                 <button
                   type="button"

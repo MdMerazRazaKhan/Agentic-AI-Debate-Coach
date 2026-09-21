@@ -1,4 +1,4 @@
-﻿"""
+"""
 Fallacy Detection Agent (Module 5 from the project doc)
 Role: scans an argument for the 8 supported logical fallacies and explains each match.
 Guarantees all explanations and correction suggestions are returned strictly in clear, natural ENGLISH.
@@ -31,6 +31,17 @@ Always respond with ONLY a JSON object in this exact shape, no extra text:
   ]
 }}
 """
+
+
+import os
+import sys
+
+# Import local AI engine service as fallback if LLM is unavailable
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "backend")))
+try:
+    from services.ai_engine import ai_engine_service
+except ImportError:
+    ai_engine_service = None
 
 
 def _build_no_fallacy_response(argument_text: str) -> dict:
@@ -73,10 +84,33 @@ class FallacyDetectionAgent(BaseAgent):
         if word_count < MIN_WORDS:
             return _build_no_fallacy_response(argument_text)
 
-        user_prompt = f"Check this argument for logical fallacies and respond in English:\n\n\"{argument_text}\""
-        raw_result = call_llm_json(SYSTEM_PROMPT, user_prompt)
+        has_api_keys = bool(os.getenv("GROQ_API_KEY") or os.getenv("GEMINI_API_KEY"))
+        raw_result = {"error": "No LLM keys"}
+        if has_api_keys:
+            user_prompt = f"Check this argument for logical fallacies and respond in English:\n\n\"{argument_text}\""
+            try:
+                raw_result = call_llm_json(SYSTEM_PROMPT, user_prompt)
+            except Exception as e:
+                raw_result = {"error": str(e)}
 
         if "error" in raw_result or "fallacies_found" not in raw_result:
+            if ai_engine_service is not None:
+                local_audit = ai_engine_service.deep_audit_fallacies(argument_text)
+                if local_audit.get("fallacies_detected"):
+                    return {
+                        "fallacies_found": [
+                            {
+                                "type": f["type"],
+                                "excerpt": f.get("excerpt", argument_text[:60]),
+                                "explanation": f["explanation"],
+                                "correction_suggestion": f["correction_suggestion"],
+                                "confidence": 92
+                            }
+                            for f in local_audit["fallacies_detected"]
+                        ],
+                        "status": "fallacies_detected",
+                        "message": f"Detected {len(local_audit['fallacies_detected'])} possible logical fallacy/ies."
+                    }
             return _build_no_fallacy_response(argument_text)
 
         filtered_fallacies = self._filter_valid_fallacies(raw_result["fallacies_found"])

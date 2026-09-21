@@ -8,6 +8,7 @@ from sqlalchemy import func
 from database import get_db
 import models, schemas
 import json
+from time_utils import format_ist, to_ist
 
 router = APIRouter(prefix="/api/v1/coaching", tags=["Recommendation & Coaching Engine"])
 
@@ -163,7 +164,7 @@ def get_coaching_plan(user_id: int, current_user: models.User = Depends(get_curr
             "Competent Rhetorician" if assigned_grade.startswith("B") else
             "Developing Competitor" if assigned_grade.startswith("C") else "Foundational Stage"
         )
-        last_graded_str = plan.updated_at.strftime("%Y-%m-%d %H:%M") if plan.updated_at else datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        last_graded_str = format_ist(plan.updated_at, "%Y-%m-%d %H:%M") if plan.updated_at else format_ist(datetime.utcnow(), "%Y-%m-%d %H:%M")
         
         # Fetch latest coach directive / feedback from Notification or Plan
         latest_coach_notif = (

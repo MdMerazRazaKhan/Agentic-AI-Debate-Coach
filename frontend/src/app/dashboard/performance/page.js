@@ -5,6 +5,314 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import SpeakerIcon from '../../../components/SpeakerIcon';
 
+function CoachFeedbackSection({
+  p,
+  isCoach,
+  feedbackForm,
+  setFeedbackForm,
+  submittingFeedback,
+  feedbackSubmitMsg,
+  handleSubmitCoachFeedback,
+  isCoachGraded
+}) {
+  const isCompleted = p.feedback_status === 'Completed' || isCoachGraded;
+
+  return (
+    <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+      {/* Header & Feedback Status Badge */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em' }}>
+            OFFICIAL ADJUDICATOR ASSESSMENT
+          </div>
+          <h3 className="font-display" style={{ fontSize: '1.4rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0 0.3rem', color: '#111827' }}>
+            {isCoach ? 'Official Coach Evaluation & Directives' : 'Official Coach Feedback'}
+          </h3>
+          <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: 0 }}>
+            {isCoach 
+              ? 'Submit official grades, marks, and structured diagnostic directives for this student session.'
+              : 'Official marks, standing, and structured feedback assigned by your debate coach.'}
+          </p>
+        </div>
+
+        {/* FEEDBACK STATUS BADGE */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            background: isCompleted ? '#DCFCE7' : '#FEF3C7',
+            color: isCompleted ? '#15803D' : '#B45309',
+            border: `1.5px solid ${isCompleted ? '#86EFAC' : '#FCD34D'}`,
+            padding: '0.4rem 0.95rem',
+            borderRadius: '8px',
+            fontSize: '0.78rem',
+            fontWeight: 800,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase'
+          }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: isCompleted ? '#16A34A' : '#D97706'
+            }} />
+            FEEDBACK STATUS: {isCompleted ? 'COMPLETED' : 'PENDING'}
+          </span>
+        </div>
+      </div>
+
+      {/* If Coach is viewing: Render the Interactive Feedback Form */}
+      {isCoach && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2rem' }}>
+          {feedbackSubmitMsg && (
+            <div style={{
+              padding: '0.85rem 1.25rem',
+              borderRadius: '8px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              background: feedbackSubmitMsg.type === 'error' ? '#FEF2F2' : '#ECFDF5',
+              color: feedbackSubmitMsg.type === 'error' ? '#DC2626' : '#059669',
+              border: `1px solid ${feedbackSubmitMsg.type === 'error' ? '#FCA5A5' : '#6EE7B7'}`
+            }}>
+              {feedbackSubmitMsg.text}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmitCoachFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', background: '#F9FAFB', padding: '1.5rem', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Assign Course Grade
+                </label>
+                <select
+                  value={feedbackForm.grade}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, grade: e.target.value }))}
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', background: '#FFF', fontWeight: 700, fontSize: '0.9rem' }}
+                >
+                  <option value="A+">A+ (Mastery Level)</option>
+                  <option value="A">A (Excellent Execution)</option>
+                  <option value="A-">A- (Very Strong)</option>
+                  <option value="B+">B+ (Good Competency)</option>
+                  <option value="B">B (Solid Performance)</option>
+                  <option value="B-">B- (Adequate)</option>
+                  <option value="C+">C+ (Needs Refinement)</option>
+                  <option value="C">C (Novice Threshold)</option>
+                  <option value="C-">C- (Significant Gaps)</option>
+                  <option value="D">D (Remedial Action Needed)</option>
+                  <option value="F">F (Unsatisfactory)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Evaluator Marks (0 - 100%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  value={feedbackForm.marks}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, marks: e.target.value }))}
+                  placeholder="e.g. 88.5"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontWeight: 700, fontSize: '0.9rem' }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#374151', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                Official Evaluator Feedback Comments *
+              </label>
+              <textarea
+                rows={3}
+                required
+                value={feedbackForm.feedback}
+                onChange={(e) => setFeedbackForm(prev => ({ ...prev, feedback: e.target.value }))}
+                placeholder="Enter detailed coach feedback, dialectical evaluation, or verbal cadence observations..."
+                style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '0.88rem', lineHeight: '1.5' }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Observed Strengths
+                </label>
+                <textarea
+                  rows={2}
+                  value={feedbackForm.strengths}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, strengths: e.target.value }))}
+                  placeholder="e.g. Disciplined Toulmin claim structure, solid empirical warranting, steady cadence"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '0.85rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#DC2626', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Areas for Growth / Weaknesses
+                </label>
+                <textarea
+                  rows={2}
+                  value={feedbackForm.weaknesses}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, weaknesses: e.target.value }))}
+                  placeholder="e.g. Vulnerable to straw man refutations, 3 filler pauses detected"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '0.85rem' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Improvement Suggestions
+                </label>
+                <textarea
+                  rows={2}
+                  value={feedbackForm.improvement_suggestions}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, improvement_suggestions: e.target.value }))}
+                  placeholder="e.g. Practice the 3-second silence rule before speaking turns"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '0.85rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+                  Actionable Recommendations
+                </label>
+                <textarea
+                  rows={2}
+                  value={feedbackForm.recommendations}
+                  onChange={(e) => setFeedbackForm(prev => ({ ...prev, recommendations: e.target.value }))}
+                  placeholder="e.g. Complete Socratic Fallacy Shielding Drill on Parliamentary format"
+                  style={{ width: '100%', padding: '0.75rem 1rem', borderRadius: '8px', border: '1.5px solid #E5E7EB', outline: 'none', fontSize: '0.85rem' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button
+                type="submit"
+                disabled={submittingFeedback}
+                style={{
+                  background: '#D90429',
+                  color: '#FFF',
+                  padding: '0.75rem 1.8rem',
+                  borderRadius: '8px',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  letterSpacing: '0.04em',
+                  border: 'none',
+                  cursor: submittingFeedback ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 12px rgba(217, 4, 41, 0.25)',
+                  transition: 'background 0.2s'
+                }}
+              >
+                {submittingFeedback ? 'SUBMITTING EVALUATION...' : 'SUBMIT COACH EVALUATION →'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Evaluation Standing Summary Cards (Always visible to Learner, and shown as reference to Coach) */}
+      <div style={{ marginTop: isCoach ? '1rem' : '0', borderTop: isCoach ? '1px solid #F3F4F6' : 'none', paddingTop: isCoach ? '1.5rem' : '0' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.6fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          {/* Column 1: Course Assigned Grade */}
+          <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
+            <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+              COURSE ASSIGNED GRADE
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: isCompleted ? '#059669' : '#6B7280' }}>
+                {p.coach_grade || 'Pending'}
+              </span>
+              {isCompleted && (
+                <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                  EVALUATED
+                </span>
+              )}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+              Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong>
+            </div>
+          </div>
+
+          {/* Column 2: Evaluator Marks */}
+          <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
+            <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+              EVALUATOR MARKS
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: p.coach_marks !== null && p.coach_marks !== undefined ? '#D90429' : '#6B7280' }}>
+                {p.coach_marks !== null && p.coach_marks !== undefined ? `${p.coach_marks}%` : 'Pending'}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
+              Assigned specifically for this session
+            </div>
+          </div>
+
+          {/* Column 3: Official Feedback */}
+          <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem', borderLeft: '4px solid #D90429' }}>
+            <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
+              OFFICIAL FEEDBACK
+            </div>
+            <p style={{ fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.5', margin: 0, fontStyle: isCompleted ? 'normal' : 'italic' }}>
+              "{p.coach_feedback || 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.'}"
+            </p>
+          </div>
+        </div>
+
+        {/* Structured Diagnostic Cards (Strengths, Weaknesses, Improvements, Recommendations) */}
+        {(p.coach_strengths || p.coach_weaknesses || p.coach_improvements || p.coach_recommendations) && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem', marginTop: '1.25rem' }}>
+            {p.coach_strengths && (
+              <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#166534', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  ✓ Observed Strengths
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#166534', margin: 0, lineHeight: '1.45' }}>
+                  {p.coach_strengths}
+                </p>
+              </div>
+            )}
+            {p.coach_weaknesses && (
+              <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#991B1B', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  ⚠ Areas for Growth / Weaknesses
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#991B1B', margin: 0, lineHeight: '1.45' }}>
+                  {p.coach_weaknesses}
+                </p>
+              </div>
+            )}
+            {p.coach_improvements && (
+              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  ★ Improvement Suggestions
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#1E40AF', margin: 0, lineHeight: '1.45' }}>
+                  {p.coach_improvements}
+                </p>
+              </div>
+            )}
+            {p.coach_recommendations && (
+              <div style={{ background: '#FAF5FF', border: '1px solid #E9D5FF', borderRadius: '10px', padding: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#6B21A8', textTransform: 'uppercase', marginBottom: '0.35rem' }}>
+                  ⚡ Actionable Recommendations
+                </div>
+                <p style={{ fontSize: '0.85rem', color: '#6B21A8', margin: 0, lineHeight: '1.45' }}>
+                  {p.coach_recommendations}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PerformanceDetailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,6 +324,33 @@ function PerformanceDetailContent() {
   const [reportMsg, setReportMsg] = useState(null);
   const [performanceData, setPerformanceData] = useState(null);
   const [activeSpeakingKey, setActiveSpeakingKey] = useState(null);
+
+  // Coach Feedback & Evaluation States
+  const [isCoach, setIsCoach] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    grade: 'A',
+    marks: '85.0',
+    feedback: '',
+    strengths: '',
+    weaknesses: '',
+    improvement_suggestions: '',
+    recommendations: ''
+  });
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
+  const [feedbackSubmitMsg, setFeedbackSubmitMsg] = useState(null);
+
+  const populateFeedbackForm = (d) => {
+    if (!d) return;
+    setFeedbackForm({
+      grade: (d.coach_grade && d.coach_grade !== 'Pending') ? d.coach_grade : 'A',
+      marks: d.coach_marks !== null && d.coach_marks !== undefined ? String(d.coach_marks) : '85.0',
+      feedback: d.coach_feedback && !d.coach_feedback.includes('Official evaluation pending') ? d.coach_feedback : '',
+      strengths: d.coach_strengths || '',
+      weaknesses: d.coach_weaknesses || '',
+      improvement_suggestions: d.coach_improvements || '',
+      recommendations: d.coach_recommendations || ''
+    });
+  };
 
   const handleSpeak = (text, key) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
@@ -43,6 +378,80 @@ function PerformanceDetailContent() {
   };
 
   useEffect(() => {
+    const token = getToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const role = (payload.role || '').toLowerCase();
+        setIsCoach(role.includes('coach') || role.includes('educator'));
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSubmitCoachFeedback = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!feedbackForm.feedback.trim()) {
+      setFeedbackSubmitMsg({ type: 'error', text: 'Please enter official feedback comments before submitting.' });
+      return;
+    }
+    setSubmittingFeedback(true);
+    setFeedbackSubmitMsg(null);
+    const token = getToken();
+    const sid = parseInt(sessionId || performanceData?.session_id);
+    const paramUid = searchParams.get('user_id');
+    const uid = performanceData?.user_id || (paramUid ? parseInt(paramUid) : 1);
+
+    try {
+      const res = await fetch("http://localhost:8000/api/v1/coaching/coach/feedback", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          student_id: uid,
+          session_id: sid,
+          grade: feedbackForm.grade,
+          marks: feedbackForm.marks ? parseFloat(feedbackForm.marks) : 85.0,
+          feedback: feedbackForm.feedback,
+          strengths: feedbackForm.strengths,
+          weaknesses: feedbackForm.weaknesses,
+          improvement_suggestions: feedbackForm.improvement_suggestions,
+          recommendations: feedbackForm.recommendations
+        })
+      });
+
+      if (res.ok) {
+        setFeedbackSubmitMsg({
+          type: 'success',
+          text: 'Official Coach Evaluation submitted successfully! Status updated to "Completed".'
+        });
+        setPerformanceData(prev => ({
+          ...prev,
+          feedback_status: 'Completed',
+          coach_grade: feedbackForm.grade,
+          coach_marks: feedbackForm.marks ? parseFloat(feedbackForm.marks) : 85.0,
+          coach_feedback: feedbackForm.feedback,
+          coach_strengths: feedbackForm.strengths,
+          coach_weaknesses: feedbackForm.weaknesses,
+          coach_improvements: feedbackForm.improvement_suggestions,
+          coach_recommendations: feedbackForm.recommendations
+        }));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setFeedbackSubmitMsg({
+          type: 'error',
+          text: errData.detail || 'Failed to submit feedback. Please check student enrollment.'
+        });
+      }
+    } catch (err) {
+      setFeedbackSubmitMsg({ type: 'error', text: 'Failed to connect to backend service.' });
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
+  useEffect(() => {
     if (!sessionId) {
       setErrorMsg("No debate session ID specified. Please select a debate from Debate History.");
       setLoading(false);
@@ -65,17 +474,75 @@ function PerformanceDetailContent() {
       if (res.ok) {
         const data = await res.json();
         setPerformanceData(data);
+        populateFeedbackForm(data);
       } else {
-        // Fallback: try fetching all history and find by ID
-        const histRes = await fetch("http://localhost:8000/api/v1/sessions/history", {
+        const studentUserId = searchParams.get('user_id');
+        const isPresentation = searchParams.get('type') === 'presentation';
+
+        // Check presentation history first if type is presentation
+        if (isPresentation) {
+          const presUrl = studentUserId
+            ? `http://localhost:8000/api/v1/presentation-analysis/history?user_id=${studentUserId}`
+            : "http://localhost:8000/api/v1/presentation-analysis/history";
+          const presRes = await fetch(presUrl, {
+            headers: token ? { "Authorization": `Bearer ${token}` } : {}
+          });
+          if (presRes.ok) {
+            const presList = await presRes.json();
+            const presTarget = presList.find(p => String(p.session_id) === String(sid) || String(p.id) === String(sid));
+            if (presTarget) {
+              const presObj = {
+                session_id: presTarget.session_id || presTarget.id,
+                user_id: presTarget.user_id,
+                title: presTarget.title || 'Presentation Analysis & Speech Evaluation',
+                topic: presTarget.topic || 'Speech Prosody Evaluation',
+                format: 'Presentation Analysis',
+                position: 'Speaker',
+                status: 'Completed',
+                date: presTarget.date || 'Recent',
+                performance_score: presTarget.overall_score || 85.0,
+                overall_score: presTarget.overall_score || 85.0,
+                coach_grade: presTarget.coach_grade || 'Pending',
+                coach_marks: presTarget.coach_marks ?? null,
+                coach_feedback: presTarget.coach_feedback || 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.',
+                coach_strengths: presTarget.coach_strengths || '',
+                coach_weaknesses: presTarget.coach_weaknesses || '',
+                coach_improvements: presTarget.coach_improvements || '',
+                coach_recommendations: presTarget.coach_recommendations || '',
+                feedback_status: presTarget.feedback_status || 'Pending',
+                evaluator_name: 'Debate Coach',
+                is_vocal_matrix: true,
+                vocal_metrics: {
+                  speech_pace_wpm: presTarget.wpm || 69.6,
+                  filler_words_count: presTarget.filler_words_count ?? 8,
+                  filler_words_list: presTarget.filler_words_list || "you know:1, basically:1, actually:1, literally:1, like:1, um:1, uh:1, so:1",
+                  confidence_score: presTarget.confidence_score ?? 30.0,
+                  clarity_score: presTarget.clarity_score ?? 46.4,
+                  engagement_score: presTarget.engagement_score ?? 62.7,
+                  ai_coach_feedback: 'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.'
+                }
+              };
+              setPerformanceData(presObj);
+              populateFeedbackForm(presObj);
+              return;
+            }
+          }
+        }
+
+        // Fallback: try fetching debate history
+        const histUrl = studentUserId
+          ? `http://localhost:8000/api/v1/sessions/history?user_id=${studentUserId}`
+          : "http://localhost:8000/api/v1/sessions/history";
+        const histRes = await fetch(histUrl, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
         if (histRes.ok) {
           const hist = await histRes.json();
           const target = hist.find(d => String(d.id) === String(sid));
           if (target) {
-            setPerformanceData({
+            const debateObj = {
               session_id: target.id,
+              user_id: target.user_id,
               title: target.title || 'Debate Simulation',
               topic: target.topic,
               format: target.format || 'Parliamentary Debate',
@@ -96,23 +563,34 @@ function PerformanceDetailContent() {
               coach_grade: target.coach_grade || 'Pending',
               coach_marks: target.coach_marks || null,
               coach_feedback: target.coach_feedback || "Official evaluation pending. Your debate coach will review your practice sessions.",
+              coach_strengths: target.coach_strengths || '',
+              coach_weaknesses: target.coach_weaknesses || '',
+              coach_improvements: target.coach_improvements || '',
+              coach_recommendations: target.coach_recommendations || '',
+              feedback_status: target.feedback_status || 'Pending',
               evaluator_name: target.evaluator_name || 'Debate Coach',
               metrics: target.metrics || { wpm: 142.0, filler_words: 1, confidence: 88.0, clarity: 85.0 }
-            });
+            };
+            setPerformanceData(debateObj);
+            populateFeedbackForm(debateObj);
             return;
           }
         }
 
-        // Second Fallback: Check presentation-analysis history for Vocal Matrix
-        const presRes = await fetch("http://localhost:8000/api/v1/presentation-analysis/history", {
+        // Second Fallback: Check presentation-analysis history
+        const presUrl2 = studentUserId
+          ? `http://localhost:8000/api/v1/presentation-analysis/history?user_id=${studentUserId}`
+          : "http://localhost:8000/api/v1/presentation-analysis/history";
+        const presRes = await fetch(presUrl2, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
         if (presRes.ok) {
           const presList = await presRes.json();
           const presTarget = presList.find(p => String(p.session_id) === String(sid) || String(p.id) === String(sid));
           if (presTarget) {
-            setPerformanceData({
+            const presObj = {
               session_id: presTarget.session_id || presTarget.id,
+              user_id: presTarget.user_id,
               title: presTarget.title || 'Presentation Analysis & Speech Evaluation',
               topic: presTarget.topic || 'Speech Prosody Evaluation',
               format: 'Presentation Analysis',
@@ -121,9 +599,14 @@ function PerformanceDetailContent() {
               date: presTarget.date || 'Recent',
               performance_score: presTarget.overall_score || 85.0,
               overall_score: presTarget.overall_score || 85.0,
-              coach_grade: 'Pending',
-              coach_marks: null,
-              coach_feedback: 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.',
+              coach_grade: presTarget.coach_grade || 'Pending',
+              coach_marks: presTarget.coach_marks ?? null,
+              coach_feedback: presTarget.coach_feedback || 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.',
+              coach_strengths: presTarget.coach_strengths || '',
+              coach_weaknesses: presTarget.coach_weaknesses || '',
+              coach_improvements: presTarget.coach_improvements || '',
+              coach_recommendations: presTarget.coach_recommendations || '',
+              feedback_status: presTarget.feedback_status || 'Pending',
               evaluator_name: 'Debate Coach',
               is_vocal_matrix: true,
               vocal_metrics: {
@@ -135,7 +618,9 @@ function PerformanceDetailContent() {
                 engagement_score: presTarget.engagement_score ?? 62.7,
                 ai_coach_feedback: 'Practice the "3-Second Silence Rule". Whenever you feel the urge to say "um" or "like", take a silent breath instead. Silence projects executive presence.'
               }
-            });
+            };
+            setPerformanceData(presObj);
+            populateFeedbackForm(presObj);
             return;
           }
         }
@@ -397,7 +882,7 @@ function PerformanceDetailContent() {
             </h1>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.84rem', color: '#4B5563', borderTop: '1px solid #F3F4F6', paddingTop: '0.9rem' }}>
-              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date}</strong></div>
+              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date ? (p.date.includes('IST') ? p.date : `${p.date} IST`) : 'Recent'}</strong></div>
               <div>Status: <strong style={{ color: '#059669' }}>{p.status || 'Completed'}</strong></div>
               <div>Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong></div>
             </div>
@@ -740,68 +1225,17 @@ function PerformanceDetailContent() {
             </div>
           </div>
 
-          {/* 6. OFFICIAL FEEDBACK Section */}
-          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em' }}>
-                OFFICIAL ADJUDICATOR ASSESSMENT
-              </div>
-              <h3 className="font-display" style={{ fontSize: '1.35rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0 0.3rem', color: '#111827' }}>
-                Official Feedback
-              </h3>
-              <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: 0 }}>
-                Official marks and performance standing assigned by your debate coach for this vocal session.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.6fr', gap: '1.5rem' }}>
-              
-              {/* Column 1: Course Assigned Grade */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  COURSE ASSIGNED GRADE
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: isCoachGraded ? '#059669' : '#6B7280' }}>
-                    {p.coach_grade || 'Pending'}
-                  </span>
-                  {isCoachGraded && (
-                    <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
-                      EVALUATED
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                  Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong>
-                </div>
-              </div>
-
-              {/* Column 2: Evaluator Marks */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  EVALUATOR MARKS
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: p.coach_marks !== null && p.coach_marks !== undefined ? '#D90429' : '#6B7280' }}>
-                    {p.coach_marks !== null && p.coach_marks !== undefined ? `${p.coach_marks}%` : 'Pending'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                  Assigned specifically for this session
-                </div>
-              </div>
-
-              {/* Column 3: Official Feedback */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem', borderLeft: '4px solid #D90429' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  OFFICIAL FEEDBACK
-                </div>
-                <p style={{ fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.5', margin: 0, fontStyle: isCoachGraded ? 'normal' : 'italic' }}>
-                  "{p.coach_feedback || 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.'}"
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* 6. OFFICIAL FEEDBACK Section with Status Badge & Coach Form */}
+          <CoachFeedbackSection
+            p={p}
+            isCoach={isCoach}
+            feedbackForm={feedbackForm}
+            setFeedbackForm={setFeedbackForm}
+            submittingFeedback={submittingFeedback}
+            feedbackSubmitMsg={feedbackSubmitMsg}
+            handleSubmitCoachFeedback={handleSubmitCoachFeedback}
+            isCoachGraded={isCoachGraded}
+          />
         </div>
       ) : (
         /* ========================================================================= */
@@ -827,7 +1261,7 @@ function PerformanceDetailContent() {
             </h1>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem', fontSize: '0.84rem', color: '#4B5563', borderTop: '1px solid #F3F4F6', paddingTop: '0.9rem' }}>
-              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date}</strong></div>
+              <div>Date Completed (IST): <strong style={{ color: '#111827' }}>{p.date ? (p.date.includes('IST') ? p.date : `${p.date} IST`) : 'Recent'}</strong></div>
               <div>Status: <strong style={{ color: '#059669' }}>{p.status || 'Completed'}</strong></div>
               <div>Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong></div>
             </div>
@@ -1024,68 +1458,17 @@ function PerformanceDetailContent() {
             </div>
           </div>
 
-          {/* Official Feedback Section */}
-          <div className="perf-interactive-box" style={{ background: '#FFF', borderRadius: '14px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-            <div style={{ marginBottom: '1.5rem' }}>
-              <div className="font-mono text-red" style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.05em' }}>
-                OFFICIAL ADJUDICATOR ASSESSMENT
-              </div>
-              <h3 className="font-display" style={{ fontSize: '1.35rem', fontWeight: 900, textTransform: 'uppercase', margin: '0.2rem 0 0.3rem', color: '#111827' }}>
-                Official Feedback
-              </h3>
-              <p style={{ fontSize: '0.82rem', color: '#6B7280', margin: 0 }}>
-                Official marks and performance standing assigned by your debate coach for this topic.
-              </p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.6fr', gap: '1.5rem' }}>
-              
-              {/* Column 1: Course Assigned Grade */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  COURSE ASSIGNED GRADE
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: isCoachGraded ? '#059669' : '#6B7280' }}>
-                    {p.coach_grade || 'Pending'}
-                  </span>
-                  {isCoachGraded && (
-                    <span style={{ background: '#ECFDF5', color: '#059669', fontSize: '0.72rem', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
-                      EVALUATED
-                    </span>
-                  )}
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                  Evaluator: <strong style={{ color: '#111827' }}>{p.evaluator_name || 'Debate Coach'}</strong>
-                </div>
-              </div>
-
-              {/* Column 2: Evaluator Marks */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  EVALUATOR MARKS
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                  <span className="font-display" style={{ fontSize: '2.5rem', fontWeight: 900, color: p.coach_marks !== null && p.coach_marks !== undefined ? '#D90429' : '#6B7280' }}>
-                    {p.coach_marks !== null && p.coach_marks !== undefined ? `${p.coach_marks}%` : 'Pending'}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.78rem', color: '#6B7280' }}>
-                  Assigned specifically for this debate topic
-                </div>
-              </div>
-
-              {/* Column 3: Official Feedback */}
-              <div className="perf-interactive-box" style={{ background: '#F9FAFB', borderRadius: '10px', padding: '1.5rem', borderLeft: '4px solid #D90429' }}>
-                <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                  OFFICIAL FEEDBACK
-                </div>
-                <p style={{ fontSize: '0.88rem', color: '#1F2937', lineHeight: '1.5', margin: 0, fontStyle: isCoachGraded ? 'normal' : 'italic' }}>
-                  "{p.coach_feedback || 'Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.'}"
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Official Feedback Section with Status Badge & Coach Form */}
+          <CoachFeedbackSection
+            p={p}
+            isCoach={isCoach}
+            feedbackForm={feedbackForm}
+            setFeedbackForm={setFeedbackForm}
+            submittingFeedback={submittingFeedback}
+            feedbackSubmitMsg={feedbackSubmitMsg}
+            handleSubmitCoachFeedback={handleSubmitCoachFeedback}
+            isCoachGraded={isCoachGraded}
+          />
         </div>
       )}
     </div>

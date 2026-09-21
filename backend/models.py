@@ -146,9 +146,29 @@ class PerformanceScore(Base):
     coach_grade = Column(String, nullable=True)
     coach_marks = Column(Float, nullable=True)
     coach_feedback = Column(Text, nullable=True)
+    coach_strengths = Column(Text, nullable=True)
+    coach_weaknesses = Column(Text, nullable=True)
+    coach_improvements = Column(Text, nullable=True)
+    coach_recommendations = Column(Text, nullable=True)
+    feedback_status = Column(String, default="Pending")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("DebateSession", back_populates="performance_scores")
+
+
+class CoachRecommendation(Base):
+    __tablename__ = "coach_recommendations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    coach_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    skill_category = Column(String, default="General")  # Argument Structure, Logical Reasoning, Rebuttal, Speaking Pace, etc.
+    priority = Column(String, default="Medium")         # High, Medium, Low
+    status = Column(String, default="Active")           # Active, In Progress, Completed
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
 
 
 class CoachingPlan(Base):

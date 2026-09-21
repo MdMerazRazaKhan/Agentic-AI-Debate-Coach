@@ -14,6 +14,7 @@ export default function Navbar() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [pendingRoute, setPendingRoute] = useState(null);
   const [userInitial, setUserInitial] = useState('D');
+  const [isCoach, setIsCoach] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -22,11 +23,13 @@ export default function Navbar() {
       setIsLoggedIn(!!token);
       if (token) {
         try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const role = (payload.role || '').toLowerCase();
+          setIsCoach(role.includes('coach') || role.includes('educator'));
           const cachedName = localStorage.getItem('logos_ai_user_name');
           if (cachedName && cachedName.trim() && !cachedName.toLowerCase().includes('hardwill')) {
             setUserInitial(cachedName.trim().charAt(0).toUpperCase());
           } else {
-            const payload = JSON.parse(atob(token.split('.')[1]));
             const resolvedName = payload.full_name || (payload.sub ? (payload.sub.toLowerCase().includes('dayan') ? 'Dayan' : payload.sub.split('@')[0]) : 'User');
             setUserInitial(resolvedName.trim().charAt(0).toUpperCase());
           }
@@ -251,13 +254,13 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Red Dashboard Box with User Initial Squircle (Replaces Logout next to bell) */}
+          {/* Red/Dark Dashboard Box with User Initial Squircle */}
           {isLoggedIn ? (
             <Link 
               href="/dashboard"
               className="dash-action-btn"
               style={{
-                background: '#D90429',
+                background: isCoach ? '#111827' : '#D90429',
                 color: '#FFFFFF',
                 padding: '0.45rem 1.1rem 0.45rem 0.55rem',
                 borderRadius: '8px',
@@ -268,12 +271,12 @@ export default function Navbar() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.6rem',
-                boxShadow: '0 2px 8px rgba(217, 4, 41, 0.25)',
+                boxShadow: isCoach ? '0 2px 8px rgba(17, 24, 39, 0.25)' : '0 2px 8px rgba(217, 4, 41, 0.25)',
                 transition: 'all 0.18s ease'
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#B00320'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#D90429'; }}
-              title="Open User Dashboard"
+              onMouseEnter={(e) => { e.currentTarget.style.background = isCoach ? '#000000' : '#B00320'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = isCoach ? '#111827' : '#D90429'; }}
+              title={isCoach ? "Open Debate Coach Dashboard" : "Open User Dashboard"}
             >
               {/* User Initial Squircle with curved edges */}
               <span style={{
@@ -281,7 +284,7 @@ export default function Navbar() {
                 height: '26px',
                 borderRadius: '6px',
                 background: '#FFFFFF',
-                color: '#D90429',
+                color: isCoach ? '#111827' : '#D90429',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -292,7 +295,7 @@ export default function Navbar() {
               }}>
                 {userInitial}
               </span>
-              <span>DASHBOARD</span>
+              <span>{isCoach ? 'COACH DASHBOARD' : 'DASHBOARD'}</span>
             </Link>
           ) : (
             <>

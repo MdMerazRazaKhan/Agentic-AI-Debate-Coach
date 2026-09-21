@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AuthModal from '../../components/AuthModal';
 import SpeakerIcon from '../../components/SpeakerIcon';
+import DebateCoachDashboard from '../../components/DebateCoachDashboard';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -496,10 +497,26 @@ export default function DashboardPage() {
   const totalDebates = debateHistory.filter(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis').length;
   const totalVocalSessions = presentationHistory.length;
 
+  // Robust helper to extract timestamp for chronological sorting
+  const getTime = (item) => {
+    if (!item) return 0;
+    if (item.created_at) {
+      const t = new Date(item.created_at).getTime();
+      if (!isNaN(t)) return t;
+    }
+    if (item.date) {
+      const clean = String(item.date).replace(/\s*IST\s*$/i, '').trim();
+      const t = new Date(clean).getTime();
+      if (!isNaN(t)) return t;
+    }
+    return typeof item.id === 'number' ? item.id : 0;
+  };
+
   // 1. Debate Improvement Trend Data
   const debateTrendData = useMemo(() => {
     const validDebates = debateHistory.filter(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis');
-    const items = validDebates.length > 0 ? validDebates : [
+    const sorted = [...validDebates].sort((a, b) => getTime(a) - getTime(b));
+    const items = sorted.length > 0 ? sorted : [
       { id: 'deb-b1', topic: 'Universal Basic Income Economic Feasibility', format: 'Parliamentary Debate', overall_score: 74, created_at: '2026-09-01' },
       { id: 'deb-b2', topic: 'Artificial General Intelligence Safety Standards', format: 'Lincoln-Douglas', overall_score: 79, created_at: '2026-09-05' },
       { id: 'deb-b3', topic: 'Autonomous Defense Grids & Human Oversight', format: 'Cross-Examination', overall_score: 84, created_at: '2026-09-10' },
@@ -530,7 +547,8 @@ export default function DashboardPage() {
 
   // 2. Presentation Improvement Trend Data
   const presentationTrendData = useMemo(() => {
-    const items = presentationHistory.length > 0 ? presentationHistory : [
+    const sorted = [...presentationHistory].sort((a, b) => getTime(a) - getTime(b));
+    const items = sorted.length > 0 ? sorted : [
       { id: 'pres-b1', topic: 'Keynote Introduction: Frontier Intelligence', wpm: 172, filler_words_count: 7, clarity_score: 72, confidence_score: 68, overall_score: 70, date: '2026-09-02' },
       { id: 'pres-b2', topic: 'Vocal Modulation: Cadence & Pacing Audit', wpm: 164, filler_words_count: 5, clarity_score: 78, confidence_score: 74, overall_score: 76, date: '2026-09-06' },
       { id: 'pres-b3', topic: 'Persuasive Rhetoric & Pause Placement', wpm: 152, filler_words_count: 3, clarity_score: 84, confidence_score: 82, overall_score: 83, date: '2026-09-11' },
@@ -565,7 +583,8 @@ export default function DashboardPage() {
   // 3. Argument Quality Improvement Trend Data
   const argumentTrendData = useMemo(() => {
     const argSessions = debateHistory.filter(d => d.argument_quality !== undefined || d.logical_consistency !== undefined);
-    const items = argSessions.length > 0 ? argSessions : [
+    const sorted = [...argSessions].sort((a, b) => getTime(a) - getTime(b));
+    const items = sorted.length > 0 ? sorted : [
       { id: 'arg-b1', topic: 'Claim Warranting: Empirical Evidence Linkage', score: 71, format: 'Toulmin Structure Audit', date: '2026-09-03' },
       { id: 'arg-b2', topic: 'Premise Coherence & Syllogistic Deduction', score: 77, format: 'Deductive Logic Analysis', date: '2026-09-07' },
       { id: 'arg-b3', topic: 'Refutation Resilience & Fallacy Shielding', score: 82, format: 'Fallacy Defense Audit', date: '2026-09-12' },
@@ -597,7 +616,8 @@ export default function DashboardPage() {
   // 4. Logical Fallacy Detection Improvement Trend Data
   const fallacyTrendData = useMemo(() => {
     const fallacySessions = debateHistory.filter(d => (d.topic || '').toLowerCase().includes('fallacy') || (d.format || '').toLowerCase().includes('fallacy') || d.logical_consistency !== undefined);
-    const items = fallacySessions.length > 0 ? fallacySessions : [
+    const sorted = [...fallacySessions].sort((a, b) => getTime(a) - getTime(b));
+    const items = sorted.length > 0 ? sorted : [
       { id: 'fal-b1', topic: 'Ad Hominem Defense in Electoral Debates', score: 72, format: 'Ad Hominem Detection Audit', date: '2026-09-02' },
       { id: 'fal-b2', topic: 'Straw Man Refutation in Environmental Policy', score: 79, format: 'Straw Man Fallacy Audit', date: '2026-09-06' },
       { id: 'fal-b3', topic: 'False Dilemma & Slippery Slope Neutralization', score: 84, format: 'Dilemma & Slope Shielding', date: '2026-09-11' },
@@ -629,7 +649,8 @@ export default function DashboardPage() {
   // 5. Counterargument & Rebuttal Trend Data
   const counterTrendData = useMemo(() => {
     const counterSessions = debateHistory.filter(d => d.rebuttal_effectiveness !== undefined);
-    const items = counterSessions.length > 0 ? counterSessions : [
+    const sorted = [...counterSessions].sort((a, b) => getTime(a) - getTime(b));
+    const items = sorted.length > 0 ? sorted : [
       { id: 'cnt-b1', topic: 'Countering Technology Monopoly Defense Claims', score: 73, format: 'Logical Rebuttal Drill', date: '2026-09-04' },
       { id: 'cnt-b2', topic: 'Refuting Economic Protectionism Arguments', score: 78, format: 'Evidence Counterargument', date: '2026-09-09' },
       { id: 'cnt-b3', topic: 'Challenging Bioethics Moratorium Assertions', score: 84, format: 'Ethical Counterargument', date: '2026-09-12' },
@@ -982,6 +1003,17 @@ export default function DashboardPage() {
     );
   }
 
+  if (isCoach || isEducator) {
+    return (
+      <DebateCoachDashboard
+        userRole={userRole}
+        userName={userName}
+        userEmail={userEmail}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
   const userInitial = (userName || fullName || 'User').trim().charAt(0).toUpperCase();
 
   return (
@@ -1175,7 +1207,7 @@ export default function DashboardPage() {
                           {d.status}
                         </span>
                       </td>
-                      <td style={{ padding: '1rem', color: '#6B7280' }}>{d.date}</td>
+                      <td style={{ padding: '1rem', color: '#6B7280' }}>{d.date ? (d.date.includes('IST') ? d.date : `${d.date} IST`) : 'Recent'}</td>
                       <td style={{ padding: '1rem', textAlign: 'center' }}>
                         <Link
                           href={`/dashboard/performance?session_id=${d.id}`}
@@ -1567,7 +1599,7 @@ export default function DashboardPage() {
                         {activeTrend.topic}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#94A3B8' }}>
-                        Date: {activeTrend.date} • Format: {activeTrend.format}
+                        Date Completed (IST): {activeTrend.date ? (activeTrend.date.includes('IST') ? activeTrend.date : `${activeTrend.date} IST`) : 'Recent'} • Format: {activeTrend.format}
                       </div>
                     </div>
                   </div>
@@ -2034,7 +2066,7 @@ export default function DashboardPage() {
                             {p.overall_score || 85}%
                           </td>
                           <td style={{ padding: '1rem', color: '#6B7280', fontSize: '0.85rem' }}>
-                            {p.date}
+                            {p.date ? (p.date.includes('IST') ? p.date : `${p.date} IST`) : 'Recent'}
                           </td>
                           <td style={{ padding: '1rem', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
                             <button

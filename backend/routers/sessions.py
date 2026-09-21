@@ -266,7 +266,13 @@ def get_unified_session_history(
     db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
     """Retrieves debate sessions, with optional filtering for presentations or unified audit."""
-    target_user_id = current_user.id if current_user else (user_id or 1)
+    # Determine target user: if coach/admin/educator specifies user_id, retrieve that student's records
+    if user_id and current_user and (current_user.role in ["Debate Coach", "Educator", "Administrator"] or current_user.id == user_id):
+        target_user_id = user_id
+    elif user_id and not current_user:
+        target_user_id = user_id
+    else:
+        target_user_id = current_user.id if current_user else (user_id or 1)
 
     sessions = (
         db.query(models.DebateSession)
@@ -372,6 +378,15 @@ def get_unified_session_history(
             c_marks = None
             c_feedback = "Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here."
 
+        # Feedback status
+        is_feedback_completed = bool(
+            (perf and perf.feedback_status == "Completed") or
+            (c_grade != "Pending") or
+            (c_marks is not None) or
+            (perf and perf.coach_feedback and "Official evaluation pending" not in perf.coach_feedback and perf.coach_feedback.strip() != "")
+        )
+        fb_status = "Completed" if is_feedback_completed else "Pending"
+
         eval_name = user_plan.evaluator_name if user_plan and user_plan.evaluator_name else "Debate Coach"
 
         history.append({
@@ -398,6 +413,11 @@ def get_unified_session_history(
             "coach_grade": c_grade,
             "coach_marks": c_marks,
             "coach_feedback": c_feedback,
+            "coach_strengths": perf.coach_strengths if perf else None,
+            "coach_weaknesses": perf.coach_weaknesses if perf else None,
+            "coach_improvements": perf.coach_improvements if perf else None,
+            "coach_recommendations": perf.coach_recommendations if perf else None,
+            "feedback_status": fb_status,
             "evaluator_name": eval_name,
             "fallacies_count": fallacies_count,
             "turns_count": len(sim_turns),
@@ -494,6 +514,14 @@ def get_session_performance_detail(
         c_marks = None
         c_feedback = "Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here."
 
+    is_feedback_completed = bool(
+        (perf and perf.feedback_status == "Completed") or
+        (c_grade != "Pending") or
+        (c_marks is not None) or
+        (perf and perf.coach_feedback and "Official evaluation pending" not in perf.coach_feedback and perf.coach_feedback.strip() != "")
+    )
+    fb_status = "Completed" if is_feedback_completed else "Pending"
+
     eval_name = user_plan.evaluator_name if user_plan and user_plan.evaluator_name else "Debate Coach"
 
     pres_insights = None
@@ -509,6 +537,7 @@ def get_session_performance_detail(
 
     return {
         "session_id": s.id,
+        "user_id": s.user_id,
         "title": s.title,
         "topic": s.topic,
         "format": "Presentation Analysis" if (s.format in ["Vocal Matrix", "Presentation Analysis", "Presentation", "Speech Analysis"] or (metric is not None and not sim_turns)) else s.format,
@@ -529,6 +558,11 @@ def get_session_performance_detail(
         "coach_grade": c_grade,
         "coach_marks": c_marks,
         "coach_feedback": c_feedback,
+        "coach_strengths": perf.coach_strengths if perf else None,
+        "coach_weaknesses": perf.coach_weaknesses if perf else None,
+        "coach_improvements": perf.coach_improvements if perf else None,
+        "coach_recommendations": perf.coach_recommendations if perf else None,
+        "feedback_status": fb_status,
         "evaluator_name": eval_name,
         "is_vocal_matrix": bool(s.format in ["Vocal Matrix", "Presentation Analysis", "Presentation", "Speech Analysis"] or (metric is not None and not sim_turns)),
         "pace_status": pres_insights["pace_status"] if pres_insights else "optimal",

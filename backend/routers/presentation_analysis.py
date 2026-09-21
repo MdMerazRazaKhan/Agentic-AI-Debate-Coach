@@ -259,7 +259,13 @@ def get_presentation_history(
     db: Session = Depends(get_db)
 ) -> List[Dict[str, Any]]:
     """Fetches full persistent Presentation Analysis history for the user, including identical metrics, insights, and summary."""
-    target_user_id = current_user.id if current_user else (user_id or 1)
+    # Determine target user: if coach/admin/educator specifies user_id, retrieve that student's records
+    if user_id and current_user and (current_user.role in ["Debate Coach", "Educator", "Administrator"] or current_user.id == user_id):
+        target_user_id = user_id
+    elif user_id and not current_user:
+        target_user_id = user_id
+    else:
+        target_user_id = current_user.id if current_user else (user_id or 1)
 
     metrics_records = (
         db.query(models.PresentationMetric)
@@ -290,9 +296,22 @@ def get_presentation_history(
         else:
             overall_score = insights["overall_score"]
 
+        # Coach feedback & status
+        c_grade = perf.coach_grade if (perf and perf.coach_grade and perf.coach_grade.strip().lower() != "pending") else "Pending"
+        c_marks = perf.coach_marks if (perf and perf.coach_marks is not None) else None
+        c_feedback = perf.coach_feedback if (perf and perf.coach_feedback) else None
+        is_feedback_completed = bool(
+            (perf and perf.feedback_status == "Completed") or
+            (c_grade != "Pending") or
+            (c_marks is not None) or
+            (c_feedback and "Official evaluation pending" not in c_feedback and c_feedback.strip() != "")
+        )
+        fb_status = "Completed" if is_feedback_completed else "Pending"
+
         history_list.append({
             "id": m.id,
             "session_id": m.session_id,
+            "user_id": m.user_id,
             "title": title,
             "topic": topic,
             "format": "Presentation Analysis",
@@ -314,6 +333,14 @@ def get_presentation_history(
             "cons": insights["cons"],
             "ai_feedback": insights["ai_feedback"],
             "summary": insights["summary"],
+            "feedback_status": fb_status,
+            "coach_grade": c_grade,
+            "coach_marks": c_marks,
+            "coach_feedback": c_feedback or "Official evaluation pending. Your debate coach will review your practice sessions and assign your performance grade and tactical directives here.",
+            "coach_strengths": perf.coach_strengths if perf else None,
+            "coach_weaknesses": perf.coach_weaknesses if perf else None,
+            "coach_improvements": perf.coach_improvements if perf else None,
+            "coach_recommendations": perf.coach_recommendations if perf else None,
             "date": format_ist(m.created_at, "%Y-%m-%d %H:%M"),
             "created_at": format_ist_iso(m.created_at)
         })

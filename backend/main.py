@@ -22,6 +22,30 @@ from routers import (
 # Initialize DB tables
 Base.metadata.create_all(bind=engine)
 
+def _migrate_database_schema():
+    from sqlalchemy import inspect, text
+    try:
+        inspector = inspect(engine)
+        cols = [c['name'] for c in inspector.get_columns('performance_scores')]
+        with engine.connect() as conn:
+            if 'coach_strengths' not in cols:
+                conn.execute(text("ALTER TABLE performance_scores ADD COLUMN coach_strengths TEXT"))
+            if 'coach_weaknesses' not in cols:
+                conn.execute(text("ALTER TABLE performance_scores ADD COLUMN coach_weaknesses TEXT"))
+            if 'coach_improvements' not in cols:
+                conn.execute(text("ALTER TABLE performance_scores ADD COLUMN coach_improvements TEXT"))
+            if 'coach_recommendations' not in cols:
+                conn.execute(text("ALTER TABLE performance_scores ADD COLUMN coach_recommendations TEXT"))
+            if 'feedback_status' not in cols:
+                conn.execute(text("ALTER TABLE performance_scores ADD COLUMN feedback_status VARCHAR DEFAULT 'Pending'"))
+                conn.execute(text("UPDATE performance_scores SET feedback_status = 'Completed' WHERE coach_grade IS NOT NULL AND coach_grade != 'Pending' AND coach_grade != ''"))
+                conn.execute(text("UPDATE performance_scores SET feedback_status = 'Pending' WHERE feedback_status IS NULL OR feedback_status = ''"))
+            conn.commit()
+    except Exception as e:
+        print(f"Warning: Database migration notice ({e})")
+
+_migrate_database_schema()
+
 def _ensure_core_accounts():
     from database import SessionLocal
     from routers.auth import hash_password

@@ -380,23 +380,17 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/sessions/history?session_type=debate", {
+      const res = await fetch("http://localhost:8000/api/v1/sessions/history?session_type=all", {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          const debateOnly = data.filter(d => {
-            const fmt = (d.format || '').toLowerCase();
-            const st = (d.session_type || '').toLowerCase();
-            return !fmt.includes('vocal') && !fmt.includes('presentation') && !fmt.includes('speech') &&
-                   !st.includes('vocal') && !st.includes('presentation') && !st.includes('speech');
-          });
-          setDebateHistory(debateOnly);
+          setDebateHistory(data);
         }
       }
     } catch (err) {
-      console.error("Failed to load debate history:", err);
+      console.error("Failed to load session history:", err);
     }
   };
 
@@ -468,13 +462,14 @@ export default function DashboardPage() {
   };
 
   // Compile unified recent activity (Top 3 most recent sessions)
+  // Compile unified recent activity (Top 3 most recent sessions)
   const unifiedRecentSessions = [
     ...debateHistory.map(d => ({
       id: `deb-${d.id}`,
       title: d.title || d.topic,
       topic: d.topic,
-      format: (d.session_type === 'Vocal Matrix' || d.session_type === 'Presentation Analysis') ? 'Presentation Analysis' : (d.format || d.session_type || 'Debate Session'),
-      type: (d.session_type === 'Vocal Matrix' || d.session_type === 'Presentation Analysis') ? 'Presentation Analysis' : 'Debate',
+      format: d.format || d.session_type || 'Practice Session',
+      type: d.session_type || 'Debate',
       score: d.score || 85,
       date: d.date || 'Recent',
       created_at: d.created_at
@@ -493,8 +488,21 @@ export default function DashboardPage() {
 
   const top3Recent = unifiedRecentSessions.slice(0, 3);
 
-  // Dynamic calculations
-  const totalDebates = debateHistory.filter(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis').length;
+  // Filter debate history strictly for debate sessions (excluding diagnostic audits like fallacy, argument, counter)
+  const debateTableSessions = useMemo(() => {
+    return debateHistory.filter(d => {
+      const st = (d.session_type || '').toLowerCase();
+      const fmt = (d.format || '').toLowerCase();
+      const tit = (d.title || '').toLowerCase();
+      return (st === 'debate' || st === 'agent simulation') &&
+             !fmt.includes('fallacy') && !fmt.includes('argument') && !fmt.includes('counter') &&
+             !fmt.includes('presentation') && !fmt.includes('vocal') && !fmt.includes('speech') &&
+             !tit.includes('fallacy') && !tit.includes('argument') && !tit.includes('counter');
+    });
+  }, [debateHistory]);
+
+  // Dynamic calculations - Debate only count
+  const totalDebates = debateTableSessions.length;
   const totalVocalSessions = presentationHistory.length;
 
   // Robust helper to extract timestamp for chronological sorting
@@ -512,16 +520,16 @@ export default function DashboardPage() {
     return typeof item.id === 'number' ? item.id : 0;
   };
 
-  // 1. Debate Improvement Trend Data
+  // 1. Debate Improvement Trend Data (Strictly isolated to Debate Simulation)
   const debateTrendData = useMemo(() => {
-    const validDebates = debateHistory.filter(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis');
+    const validDebates = debateTableSessions;
     const sorted = [...validDebates].sort((a, b) => getTime(a) - getTime(b));
     const items = sorted.length > 0 ? sorted : [
-      { id: 'deb-b1', topic: 'Universal Basic Income Economic Feasibility', format: 'Parliamentary Debate', overall_score: 74, created_at: '2026-09-01' },
-      { id: 'deb-b2', topic: 'Artificial General Intelligence Safety Standards', format: 'Lincoln-Douglas', overall_score: 79, created_at: '2026-09-05' },
-      { id: 'deb-b3', topic: 'Autonomous Defense Grids & Human Oversight', format: 'Cross-Examination', overall_score: 84, created_at: '2026-09-10' },
-      { id: 'deb-b4', topic: 'Stratospheric Aerosol Injection Protocols', format: 'Parliamentary Debate', overall_score: 88, created_at: '2026-09-15' },
-      { id: 'deb-b5', topic: 'Decentralized Digital Identity & State Sovereignty', format: 'Championship Round', overall_score: 92, created_at: '2026-09-17' },
+      { id: 'deb-b1', topic: 'Universal Basic Income Economic Feasibility', format: 'Parliamentary Debate', overall_score: 74, date: '2026-09-01 10:30' },
+      { id: 'deb-b2', topic: 'Artificial General Intelligence Safety Standards', format: 'Lincoln-Douglas', overall_score: 79, date: '2026-09-05 14:00' },
+      { id: 'deb-b3', topic: 'Autonomous Defense Grids & Human Oversight', format: 'Cross-Examination', overall_score: 84, date: '2026-09-10 16:30' },
+      { id: 'deb-b4', topic: 'Stratospheric Aerosol Injection Protocols', format: 'Parliamentary Debate', overall_score: 88, date: '2026-09-15 12:15' },
+      { id: 'deb-b5', topic: 'Decentralized Digital Identity & State Sovereignty', format: 'Championship Round', overall_score: 92, date: '2026-09-17 18:45' },
     ];
     let runSum = 0;
     return items.map((d, index) => {
@@ -549,11 +557,11 @@ export default function DashboardPage() {
   const presentationTrendData = useMemo(() => {
     const sorted = [...presentationHistory].sort((a, b) => getTime(a) - getTime(b));
     const items = sorted.length > 0 ? sorted : [
-      { id: 'pres-b1', topic: 'Keynote Introduction: Frontier Intelligence', wpm: 172, filler_words_count: 7, clarity_score: 72, confidence_score: 68, overall_score: 70, date: '2026-09-02' },
-      { id: 'pres-b2', topic: 'Vocal Modulation: Cadence & Pacing Audit', wpm: 164, filler_words_count: 5, clarity_score: 78, confidence_score: 74, overall_score: 76, date: '2026-09-06' },
-      { id: 'pres-b3', topic: 'Persuasive Rhetoric & Pause Placement', wpm: 152, filler_words_count: 3, clarity_score: 84, confidence_score: 82, overall_score: 83, date: '2026-09-11' },
-      { id: 'pres-b4', topic: 'Executive Briefing: Technical Synthesis', wpm: 146, filler_words_count: 2, clarity_score: 89, confidence_score: 88, overall_score: 89, date: '2026-09-14' },
-      { id: 'pres-b5', topic: 'Keynote Address: Socratic Articulation', wpm: 140, filler_words_count: 1, clarity_score: 94, confidence_score: 92, overall_score: 93, date: '2026-09-17' },
+      { id: 'pres-b1', topic: 'Keynote Introduction: Frontier Intelligence', wpm: 172, filler_words_count: 7, clarity_score: 72, confidence_score: 68, overall_score: 70, date: '2026-09-02 09:30' },
+      { id: 'pres-b2', topic: 'Vocal Modulation: Cadence & Pacing Audit', wpm: 164, filler_words_count: 5, clarity_score: 78, confidence_score: 74, overall_score: 76, date: '2026-09-06 13:00' },
+      { id: 'pres-b3', topic: 'Persuasive Rhetoric & Pause Placement', wpm: 152, filler_words_count: 3, clarity_score: 84, confidence_score: 82, overall_score: 83, date: '2026-09-11 15:30' },
+      { id: 'pres-b4', topic: 'Executive Briefing: Technical Synthesis', wpm: 146, filler_words_count: 2, clarity_score: 89, confidence_score: 88, overall_score: 89, date: '2026-09-14 11:15' },
+      { id: 'pres-b5', topic: 'Keynote Address: Socratic Articulation', wpm: 140, filler_words_count: 1, clarity_score: 94, confidence_score: 92, overall_score: 93, date: '2026-09-17 16:45' },
     ];
     let runSum = 0;
     return items.map((p, index) => {
@@ -580,16 +588,22 @@ export default function DashboardPage() {
     });
   }, [presentationHistory]);
 
-  // 3. Argument Quality Improvement Trend Data
+  // 3. Argument Quality Improvement Trend Data (Strictly isolated to Argument Analysis)
   const argumentTrendData = useMemo(() => {
-    const argSessions = debateHistory.filter(d => d.argument_quality !== undefined || d.logical_consistency !== undefined);
+    const argSessions = debateHistory.filter(d => {
+      const st = (d.session_type || '').toLowerCase();
+      const fmt = (d.format || '').toLowerCase();
+      const tit = (d.title || '').toLowerCase();
+      return (st === 'argument analysis' || fmt.includes('argument') || tit.includes('argument analysis')) &&
+             !fmt.includes('fallacy') && !fmt.includes('counter') && !tit.includes('fallacy') && !tit.includes('counter');
+    });
     const sorted = [...argSessions].sort((a, b) => getTime(a) - getTime(b));
     const items = sorted.length > 0 ? sorted : [
-      { id: 'arg-b1', topic: 'Claim Warranting: Empirical Evidence Linkage', score: 71, format: 'Toulmin Structure Audit', date: '2026-09-03' },
-      { id: 'arg-b2', topic: 'Premise Coherence & Syllogistic Deduction', score: 77, format: 'Deductive Logic Analysis', date: '2026-09-07' },
-      { id: 'arg-b3', topic: 'Refutation Resilience & Fallacy Shielding', score: 82, format: 'Fallacy Defense Audit', date: '2026-09-12' },
-      { id: 'arg-b4', topic: 'Statistical Data Substantiation & Credibility', score: 87, format: 'Empirical Warrant Verification', date: '2026-09-15' },
-      { id: 'arg-b5', topic: 'Dialectic Synthesis & Counter-Premise Defense', score: 91, format: 'Advanced Rhetoric Audit', date: '2026-09-17' },
+      { id: 'arg-b1', topic: 'Claim Warranting: Empirical Evidence Linkage', score: 71, format: 'Toulmin Structure Audit', date: '2026-09-03 10:15' },
+      { id: 'arg-b2', topic: 'Premise Coherence & Syllogistic Deduction', score: 77, format: 'Deductive Logic Analysis', date: '2026-09-07 15:40' },
+      { id: 'arg-b3', topic: 'Refutation Resilience & Fallacy Shielding', score: 82, format: 'Fallacy Defense Audit', date: '2026-09-12 12:20' },
+      { id: 'arg-b4', topic: 'Statistical Data Substantiation & Credibility', score: 87, format: 'Empirical Warrant Verification', date: '2026-09-15 17:05' },
+      { id: 'arg-b5', topic: 'Dialectic Synthesis & Counter-Premise Defense', score: 91, format: 'Advanced Rhetoric Audit', date: '2026-09-17 19:10' },
     ];
     let runSum = 0;
     return items.map((a, index) => {
@@ -613,16 +627,22 @@ export default function DashboardPage() {
     });
   }, [debateHistory]);
 
-  // 4. Logical Fallacy Detection Improvement Trend Data
+  // 4. Logical Fallacy Detection Improvement Trend Data (Strictly isolated to Fallacy Detection Engine)
   const fallacyTrendData = useMemo(() => {
-    const fallacySessions = debateHistory.filter(d => (d.topic || '').toLowerCase().includes('fallacy') || (d.format || '').toLowerCase().includes('fallacy') || d.logical_consistency !== undefined);
+    const fallacySessions = debateHistory.filter(d => {
+      const st = (d.session_type || '').toLowerCase();
+      const fmt = (d.format || '').toLowerCase();
+      const tit = (d.title || '').toLowerCase();
+      const top = (d.topic || '').toLowerCase();
+      return st === 'fallacy detection' || fmt.includes('fallacy') || tit.includes('fallacy') || top.includes('fallacy');
+    });
     const sorted = [...fallacySessions].sort((a, b) => getTime(a) - getTime(b));
     const items = sorted.length > 0 ? sorted : [
-      { id: 'fal-b1', topic: 'Ad Hominem Defense in Electoral Debates', score: 72, format: 'Ad Hominem Detection Audit', date: '2026-09-02' },
-      { id: 'fal-b2', topic: 'Straw Man Refutation in Environmental Policy', score: 79, format: 'Straw Man Fallacy Audit', date: '2026-09-06' },
-      { id: 'fal-b3', topic: 'False Dilemma & Slippery Slope Neutralization', score: 84, format: 'Dilemma & Slope Shielding', date: '2026-09-11' },
-      { id: 'fal-b4', topic: 'Appeal to Authority & Circular Reasoning Audit', score: 88, format: 'Epistemic Warrant Verification', date: '2026-09-15' },
-      { id: 'fal-b5', topic: 'Red Herring & Hasty Generalization Elimination', score: 94, format: 'Master Fallacy Insulation', date: '2026-09-17' },
+      { id: 'fal-b1', topic: 'Ad Hominem Defense in Electoral Debates', score: 72, format: 'Ad Hominem Detection Audit', date: '2026-09-02 11:30' },
+      { id: 'fal-b2', topic: 'Straw Man Refutation in Environmental Policy', score: 79, format: 'Straw Man Fallacy Audit', date: '2026-09-06 14:15' },
+      { id: 'fal-b3', topic: 'False Dilemma & Slippery Slope Neutralization', score: 84, format: 'Dilemma & Slope Shielding', date: '2026-09-11 16:45' },
+      { id: 'fal-b4', topic: 'Appeal to Authority & Circular Reasoning Audit', score: 88, format: 'Epistemic Warrant Verification', date: '2026-09-15 10:20' },
+      { id: 'fal-b5', topic: 'Red Herring & Hasty Generalization Elimination', score: 94, format: 'Master Fallacy Insulation', date: '2026-09-17 18:30' },
     ];
     let runSum = 0;
     return items.map((f, index) => {
@@ -646,16 +666,22 @@ export default function DashboardPage() {
     });
   }, [debateHistory]);
 
-  // 5. Counterargument & Rebuttal Trend Data
+  // 5. Counterargument & Rebuttal Trend Data (Strictly isolated to Counterargument Engine)
   const counterTrendData = useMemo(() => {
-    const counterSessions = debateHistory.filter(d => d.rebuttal_effectiveness !== undefined);
+    const counterSessions = debateHistory.filter(d => {
+      const st = (d.session_type || '').toLowerCase();
+      const fmt = (d.format || '').toLowerCase();
+      const tit = (d.title || '').toLowerCase();
+      return (st === 'counterargument' || fmt.includes('counter') || tit.includes('counter')) &&
+             !fmt.includes('fallacy') && !tit.includes('fallacy');
+    });
     const sorted = [...counterSessions].sort((a, b) => getTime(a) - getTime(b));
     const items = sorted.length > 0 ? sorted : [
-      { id: 'cnt-b1', topic: 'Countering Technology Monopoly Defense Claims', score: 73, format: 'Logical Rebuttal Drill', date: '2026-09-04' },
-      { id: 'cnt-b2', topic: 'Refuting Economic Protectionism Arguments', score: 78, format: 'Evidence Counterargument', date: '2026-09-09' },
-      { id: 'cnt-b3', topic: 'Challenging Bioethics Moratorium Assertions', score: 84, format: 'Ethical Counterargument', date: '2026-09-12' },
-      { id: 'cnt-b4', topic: 'Dismantling Surveillance Overreach Claims', score: 89, format: 'Practical Counterpoint Drill', date: '2026-09-15' },
-      { id: 'cnt-b5', topic: 'Socratic Cross-Examination on Free Expression', score: 94, format: 'Strategic Rebuttal Mastery', date: '2026-09-17' },
+      { id: 'cnt-b1', topic: 'Countering Technology Monopoly Defense Claims', score: 73, format: 'Logical Rebuttal Drill', date: '2026-09-04 11:00' },
+      { id: 'cnt-b2', topic: 'Refuting Economic Protectionism Arguments', score: 78, format: 'Evidence Counterargument', date: '2026-09-09 14:30' },
+      { id: 'cnt-b3', topic: 'Challenging Bioethics Moratorium Assertions', score: 84, format: 'Ethical Counterargument', date: '2026-09-12 16:15' },
+      { id: 'cnt-b4', topic: 'Dismantling Surveillance Overreach Claims', score: 89, format: 'Practical Counterpoint Drill', date: '2026-09-15 11:45' },
+      { id: 'cnt-b5', topic: 'Socratic Cross-Examination on Free Expression', score: 94, format: 'Strategic Rebuttal Mastery', date: '2026-09-17 17:50' },
     ];
     let runSum = 0;
     return items.map((c, index) => {
@@ -804,7 +830,7 @@ export default function DashboardPage() {
     if (!presentationHistory || presentationHistory.length === 0) return null;
     return presentationHistory.find(p => p.id === selectedPresId) || presentationHistory[0];
   }, [presentationHistory, selectedPresId]);
-  const latestDebate = debateHistory.find(d => d.session_type !== 'Vocal Matrix' && d.session_type !== 'Presentation Analysis') || debateHistory[0] || null;
+  const latestDebate = debateTableSessions[0] || null;
 
   const currentPace = latestVocal ? `${latestVocal.wpm} WPM` : (latestDebate?.metrics?.wpm ? `${latestDebate.metrics.wpm} WPM` : (hasSessions ? '142 WPM' : '0 WPM (Pending)'));
   const displayAvgScore = hasSessions ? `${avgScore}%` : '0% (Pending)';
@@ -1003,7 +1029,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (isCoach || isEducator) {
+  if (isCoach || isEducator || isAdmin) {
     return (
       <DebateCoachDashboard
         userRole={userRole}
@@ -1180,8 +1206,8 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {debateHistory.length > 0 ? (
-                  debateHistory.map((d) => (
+                {debateTableSessions.length > 0 ? (
+                  debateTableSessions.map((d) => (
                     <tr key={d.id} style={{ borderBottom: '1px solid #F3F4F6' }}>
                       <td 
                         style={{ padding: '0.85rem 1rem', cursor: 'pointer' }}

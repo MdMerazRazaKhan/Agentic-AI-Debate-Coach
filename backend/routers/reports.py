@@ -751,6 +751,11 @@ def export_coach_roster_pdf(
     db: Session = Depends(get_db)
 ):
     """Generates an executive Classroom Cohort Audit PDF or a specific Student Evaluation Report."""
+    if auth_user and auth_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied for role '{auth_user.role}'. Coach privileges required to export cohort rosters."
+        )
     coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
     st = get_custom_pdf_styles()
 
@@ -969,6 +974,11 @@ def export_coach_roster_excel(
     db: Session = Depends(get_db)
 ):
     """Generates an authentic CSV / Excel data export of the student roster or a specific student's metrics."""
+    if auth_user and auth_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied for role '{auth_user.role}'. Coach privileges required to export cohort rosters."
+        )
     coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
     
     # If a specific student was targeted:
@@ -1069,6 +1079,11 @@ def export_coach_coaching_pdf(
     db: Session = Depends(get_db)
 ):
     """Generates the Debate Coach Master Instructional Directives & Cohort Coaching Plan PDF."""
+    if auth_user and auth_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied for role '{auth_user.role}'. Coach privileges required to export cohort coaching directives."
+        )
     coach = auth_user or models.User(id=1, full_name="Debate Coach", email="coach@logos.ai", role="Debate Coach")
     st = get_custom_pdf_styles()
 

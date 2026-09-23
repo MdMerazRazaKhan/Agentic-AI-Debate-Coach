@@ -61,7 +61,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       if (data.full_name) {
         localStorage.setItem('logos_ai_user_name', data.full_name);
       }
-      setMessage({ type: 'success', text: 'Access granted! Welcome to LOGOS.AI.' });
+      setMessage({ type: 'success', text: `Access granted! Welcome, ${data.full_name || 'User'}. Verified Role: ${data.role || 'Learner'}.` });
       
       setTimeout(() => {
         if (onAuthSuccess) onAuthSuccess(data);
@@ -266,45 +266,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
                 </button>
               </div>
-            </div>
-
-            {/* Select Role */}
-            <div style={{ marginBottom: '1.1rem', position: 'relative' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#374151', marginBottom: '0.35rem' }}>Select Role</label>
-              <div
-                onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 2.5rem 0.75rem 1rem',
-                  borderRadius: '8px',
-                  border: '1px solid #E5E7EB',
-                  background: '#FFFFFF',
-                  fontSize: '0.9rem',
-                  color: '#111827',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  boxSizing: 'border-box',
-                  position: 'relative'
-                }}
-              >
-                <span>{role}</span>
-                <span style={{ position: 'absolute', right: '1rem', fontSize: '0.7rem', color: '#6B7280', transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
-              </div>
-
-              {isRoleDropdownOpen && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '8px', zIndex: 100, marginTop: '4px', boxShadow: '0 8px 16px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-                  {rolesList.map((r) => (
-                    <div
-                      key={r}
-                      onClick={() => { setRole(r); setIsRoleDropdownOpen(false); }}
-                      style={{ padding: '0.65rem 1rem', fontSize: '0.85rem', color: role === r ? 'var(--accent-red)' : '#374151', background: role === r ? '#FEF2F2' : '#fff', cursor: 'pointer' }}
-                    >
-                      {r}
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>

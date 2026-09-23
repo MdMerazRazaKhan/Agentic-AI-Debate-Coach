@@ -319,6 +319,11 @@ def get_coaching_plan(user_id: int, current_user: models.User = Depends(get_curr
 
 @router.get("/coach/overview")
 def get_coach_overview(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=f"Access denied for role '{current_user.role}'. Coach dashboard privileges required."
+        )
     # 1. Total student count (learners / non-coaches)
     students = db.query(models.User).filter(
         models.User.id != current_user.id,
@@ -389,6 +394,11 @@ def get_coach_overview(current_user: models.User = Depends(get_current_user), db
 
 @router.get("/coach/students")
 def get_coach_students(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=f"Access denied for role '{current_user.role}'. Coach dashboard privileges required."
+        )
     # Query all students / learners
     users = db.query(models.User).filter(
         models.User.id != current_user.id,
@@ -526,6 +536,11 @@ def get_coach_students(current_user: models.User = Depends(get_current_user), db
 
 @router.post("/coach/feedback")
 def send_coach_feedback(payload: CoachFeedbackRequest, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if current_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=f"Access denied for role '{current_user.role}'. Only Debate Coaches, Educators, and Administrators can submit coach evaluations."
+        )
     student = db.query(models.User).filter(models.User.id == payload.student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
@@ -1156,6 +1171,11 @@ def get_coach_evaluations(
     db: Session = Depends(get_db)
 ):
     """Lists all student sessions for the coach, showing feedback status (Pending vs Completed)."""
+    if current_user.role not in ["Debate Coach", "Educator", "Administrator"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail=f"Access denied for role '{current_user.role}'. Coach dashboard privileges required."
+        )
     query = db.query(models.DebateSession)
     if student_id:
         query = query.filter(models.DebateSession.user_id == student_id)

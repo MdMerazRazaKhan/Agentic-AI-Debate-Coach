@@ -292,13 +292,22 @@ def get_unified_session_history(
         
         # Categorize session type cleanly
         fmt = (s.format or "").strip()
-        if "Vocal" in fmt:
+        fmt_lower = fmt.lower()
+        title_lower = (s.title or "").lower()
+
+        if "fallacy" in fmt_lower or "fallacy" in title_lower:
+            session_type_val = "Fallacy Detection"
+        elif "counter" in fmt_lower or "counter" in title_lower:
+            session_type_val = "Counterargument"
+        elif "argument" in fmt_lower or "argument" in title_lower:
+            session_type_val = "Argument Analysis"
+        elif "vocal" in fmt_lower:
             session_type_val = "Vocal Matrix"
-        elif "Presentation" in fmt:
+        elif "presentation" in fmt_lower or "presentation" in title_lower:
             session_type_val = "Presentation Analysis"
-        elif "Speech" in fmt:
+        elif "speech" in fmt_lower or "speech" in title_lower:
             session_type_val = "Speech Analysis"
-        elif "Simulation" in fmt:
+        elif "simulation" in fmt_lower:
             session_type_val = "Agent Simulation"
         else:
             session_type_val = "Debate"
@@ -308,11 +317,24 @@ def get_unified_session_history(
             (metric is not None and not sim_turns)
         )
 
-        filter_mode = (session_type or "debate").strip().lower()
-        if filter_mode == "debate" and is_presentation_item:
-            continue
-        elif filter_mode in ["presentation", "vocal"] and not is_presentation_item:
-            continue
+        filter_mode = (session_type or "all").strip().lower()
+        if filter_mode == "all":
+            pass
+        elif filter_mode == "debate":
+            if session_type_val not in ["Debate", "Agent Simulation"]:
+                continue
+        elif filter_mode in ["presentation", "vocal"]:
+            if not is_presentation_item:
+                continue
+        elif filter_mode in ["fallacy", "fallacies"]:
+            if session_type_val != "Fallacy Detection":
+                continue
+        elif filter_mode in ["argument", "arguments"]:
+            if session_type_val != "Argument Analysis":
+                continue
+        elif filter_mode in ["counter", "counterargument", "counterarguments"]:
+            if session_type_val != "Counterargument":
+                continue
 
         # Tally fallacies and turn metrics if any
         fallacies_count = 0

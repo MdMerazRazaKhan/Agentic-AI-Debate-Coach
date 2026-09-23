@@ -26,14 +26,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Custom Dropdown States
-  const [role, setRole] = useState('Learner');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-
   const [message, setMessage] = useState(null);
   const [loading, setLoading] = useState(false);
-
-  const rolesList = ['Learner', 'Debate Coach', 'Educator', 'Administrator'];
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -67,19 +61,18 @@ export default function LoginPage() {
         throw new Error(data.detail || "Authentication failed.");
       }
 
-      if (data.role) {
-        setRole(data.role);
-      }
-
       localStorage.setItem('logos_ai_jwt', data.access_token);
       if (data.full_name) {
         localStorage.setItem('logos_ai_user_name', data.full_name);
       }
-      setMessage({ type: 'success', text: `Access granted! Redirecting to dashboard...` });
+      setMessage({ 
+        type: 'success', 
+        text: `Access granted! Welcome, ${data.full_name || 'User'}. Verified Role: ${data.role || 'Learner'}. Redirecting...` 
+      });
       
       setTimeout(() => {
         router.push("/dashboard");
-      }, 800);
+      }, 700);
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -136,87 +129,6 @@ export default function LoginPage() {
                 {showPassword ? <EyeSlashIcon /> : <EyeIcon />}
               </button>
             </div>
-          </div>
-
-          {/* Select Role Custom Dropdown */}
-          <div style={{ marginBottom: '1.25rem', position: 'relative' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, color: '#374151', marginBottom: '0.4rem' }}>Select Role</label>
-            
-            <div
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              style={{
-                width: '100%',
-                padding: '0.85rem 3rem 0.85rem 1.25rem',
-                borderRadius: '8px',
-                border: '1px solid #E5E7EB',
-                background: '#FFFFFF',
-                fontSize: '0.9rem',
-                color: '#111827',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                boxSizing: 'border-box',
-                userSelect: 'none',
-                position: 'relative'
-              }}
-            >
-              <span>{role}</span>
-              
-              <span 
-                style={{ 
-                  position: 'absolute',
-                  right: '1.5rem',
-                  fontSize: '0.75rem',
-                  color: '#6B7280',
-                  transition: 'transform 0.2s', 
-                  transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' 
-                }}
-              >
-                ▼
-              </span>
-            </div>
-
-            {isDropdownOpen && (
-              <div 
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#FFFFFF',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.08)',
-                  marginTop: '0.5rem',
-                  zIndex: 100,
-                  padding: '4px',
-                  boxSizing: 'border-box',
-                  overflow: 'hidden'
-                }}
-              >
-                {rolesList.map((r) => (
-                  <div
-                    key={r}
-                    onClick={() => {
-                      setRole(r);
-                      setIsDropdownOpen(false);
-                    }}
-                    style={{
-                      padding: '0.75rem 1.25rem',
-                      borderRadius: '6px',
-                      fontSize: '0.9rem',
-                      color: role === r ? 'var(--accent-red)' : '#374151',
-                      background: role === r ? '#FEF2F2' : 'transparent',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      fontWeight: role === r ? 600 : 400
-                    }}
-                  >
-                    {r}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Remember Me */}

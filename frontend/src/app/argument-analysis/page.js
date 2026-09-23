@@ -131,9 +131,15 @@ export default function ArgumentAnalysisPage() {
     setError(null);
 
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("logos_ai_jwt") : null;
+      const headers = { "Content-Type": "application/json" };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch("http://localhost:8000/api/v1/argument-analysis/deep-evaluate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           topic: topic.trim(),
           argument: argument.trim()

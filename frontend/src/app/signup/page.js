@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -62,11 +62,14 @@ export default function SignUpPage() {
       }
 
       localStorage.setItem('logos_ai_jwt', data.access_token);
-      setMessage({ type: 'success', text: `Account created successfully! Redirecting...` });
+      if (data.full_name || fullName) {
+        localStorage.setItem('logos_ai_user_name', data.full_name || fullName);
+      }
+      setMessage({ type: 'success', text: `Account created successfully as ${role}! Redirecting to dashboard...` });
       
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1200);
+      }, 900);
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {

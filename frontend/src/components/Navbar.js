@@ -15,6 +15,7 @@ export default function Navbar() {
   const [pendingRoute, setPendingRoute] = useState(null);
   const [userInitial, setUserInitial] = useState('D');
   const [isCoach, setIsCoach] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function Navbar() {
           const payload = JSON.parse(atob(token.split('.')[1]));
           const role = (payload.role || '').toLowerCase();
           setIsCoach(role.includes('coach') || role.includes('educator'));
+          setIsAdmin(role.includes('admin'));
           const cachedName = localStorage.getItem('logos_ai_user_name');
           if (cachedName && cachedName.trim() && !cachedName.toLowerCase().includes('hardwill')) {
             setUserInitial(cachedName.trim().charAt(0).toUpperCase());
@@ -295,24 +297,24 @@ export default function Navbar() {
               }}>
                 {userInitial}
               </span>
-              <span>{isCoach ? 'COACH DASHBOARD' : 'DASHBOARD'}</span>
+              <span>{isCoach ? 'COACH DASHBOARD' : (isAdmin ? 'ADMIN DASHBOARD' : 'DASHBOARD')}</span>
             </Link>
           ) : (
             <>
-              <button 
-                onClick={() => setIsAuthModalOpen(true)}
+              <Link 
+                href="/login"
                 className="btn btn-login" 
-                style={{ padding: '0.55rem 1.25rem', border: '1px solid #e5e5eb', borderRadius: '8px', background: 'transparent', color: '#000', textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '0.55rem 1.25rem', border: '1px solid #e5e5eb', borderRadius: '8px', background: 'transparent', color: '#000', textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
               >
                 Login
-              </button>
-              <button 
-                onClick={() => setIsAuthModalOpen(true)}
+              </Link>
+              <Link 
+                href="/signup"
                 className="btn btn-dark" 
-                style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', background: '#18181b', color: '#fff', textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '0.55rem 1.25rem', borderRadius: '8px', background: '#18181b', color: '#fff', textTransform: 'uppercase', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}
               >
                 Sign Up
-              </button>
+              </Link>
             </>
           )}
         </div>

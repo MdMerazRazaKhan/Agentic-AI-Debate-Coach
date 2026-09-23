@@ -34,7 +34,10 @@ class Settings:
     MONGO_DB: str = os.getenv("MONGO_DB", "logos_ai_transcripts")
     CORS_ORIGINS: list[str] = [
         origin.strip()
-        for origin in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001").split(",")
+        for origin in os.getenv(
+            "CORS_ORIGINS", 
+            "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001,https://logos-ai-pi.vercel.app,https://logos-ai.vercel.app"
+        ).split(",")
         if origin.strip()
     ]
 

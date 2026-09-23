@@ -37,7 +37,11 @@ def get_db():
 mongo_db_instance = None
 try:
     import pymongo
-    mongo_client = pymongo.MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=2000)
+    mongo_client = pymongo.MongoClient(
+        settings.MONGO_URI, 
+        serverSelectionTimeoutMS=5000, 
+        tlsAllowInvalidCertificates=True
+    )
     mongo_db_instance = mongo_client[settings.MONGO_DB]
     logging.info("Connected to MongoDB Secondary Database.")
 except Exception as e:

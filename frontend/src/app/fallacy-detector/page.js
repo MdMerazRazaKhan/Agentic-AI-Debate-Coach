@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import SpeakerIcon from "../../components/SpeakerIcon";
 import MicIcon from "../../components/MicIcon";
+import { getApiUrl } from "../../config/api";
 
 export default function FallacyDetectorPage() {
   const [topic, setTopic] = useState("");
@@ -194,7 +195,7 @@ export default function FallacyDetectorPage() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch("http://localhost:8000/api/v1/fallacy-detection/deep-audit", {
+      const res = await fetch(getApiUrl("/api/v1/fallacy-detection/deep-audit"), {
         method: "POST",
         headers,
         body: JSON.stringify({

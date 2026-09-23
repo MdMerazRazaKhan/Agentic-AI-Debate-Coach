@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AuthModal from '../../components/AuthModal';
 import MicIcon from '../../components/MicIcon';
 import SpeakerIcon from '../../components/SpeakerIcon';
+import { getApiUrl } from '../../config/api';
 
 const authHeaders = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
@@ -262,7 +263,7 @@ export default function PresentationPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/presentation-analysis/evaluate", {
+      const res = await fetch(getApiUrl("/api/v1/presentation-analysis/evaluate"), {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({

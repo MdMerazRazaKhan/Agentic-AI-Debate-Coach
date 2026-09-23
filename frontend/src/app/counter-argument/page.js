@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import SpeakerIcon from "../../components/SpeakerIcon";
 import MicIcon from "../../components/MicIcon";
+import { getApiUrl } from "../../config/api";
 
 export default function CounterArgumentPage() {
   const [topic, setTopic] = useState("");
@@ -146,7 +147,7 @@ export default function CounterArgumentPage() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch("http://localhost:8000/api/v1/counterarguments/deep-generate", {
+      const res = await fetch(getApiUrl("/api/v1/counterarguments/deep-generate"), {
         method: "POST",
         headers,
         body: JSON.stringify({

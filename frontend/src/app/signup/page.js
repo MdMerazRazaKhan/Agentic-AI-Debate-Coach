@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getApiUrl } from '../../config/api';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -35,7 +36,7 @@ export default function SignUpPage() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/register", {
+      const res = await fetch(getApiUrl("/api/v1/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -52,7 +53,7 @@ export default function SignUpPage() {
       if (!res.ok) throw new Error(data.detail || "Registration failed.");
 
       if (goal || topics) {
-        await fetch(`http://localhost:8000/api/v1/auth/profile/me?learning_goals=${encodeURIComponent(goal)}&preferred_topics=${encodeURIComponent(topics)}`, {
+        await fetch(getApiUrl(`/api/v1/auth/profile/me?learning_goals=${encodeURIComponent(goal)}&preferred_topics=${encodeURIComponent(topics)}`), {
           method: "PUT",
           headers: { 
             "Authorization": `Bearer ${data.access_token}`,

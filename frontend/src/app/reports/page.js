@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthModal from '../../components/AuthModal';
+import { getApiUrl } from '../../config/api';
 
 function ReportsPageContent() {
   const searchParams = useSearchParams();
@@ -63,7 +64,7 @@ function ReportsPageContent() {
     if (sessionIdParam) {
       setSelectedSessionId(sessionIdParam);
       const token = getToken();
-      fetch(`http://localhost:8000/api/v1/sessions/${sessionIdParam}/performance`, {
+      fetch(getApiUrl(`/api/v1/sessions/${sessionIdParam}/performance`), {
         headers: token ? { "Authorization": `Bearer ${token}` } : {}
       })
       .then(res => res.ok ? res.json() : null)
@@ -78,7 +79,7 @@ function ReportsPageContent() {
 
   const fetchCoachStudents = async (token) => {
     try {
-      const res = await fetch("http://localhost:8000/api/v1/coaching/coach/students", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/coach/students"), {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -94,7 +95,7 @@ function ReportsPageContent() {
 
   const fetchUserSessions = async (token) => {
     try {
-      const res = await fetch("http://localhost:8000/api/v1/sessions/history", {
+      const res = await fetch(getApiUrl("/api/v1/sessions/history"), {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (res.ok) {
@@ -173,13 +174,13 @@ function ReportsPageContent() {
     const sid = selectedSessionId || (isCoachOrEducator ? 'all' : 'latest');
     if (isCoachOrEducator) {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`,
+        getApiUrl(`/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`),
         sid === 'all' ? 'LogosAI_Student_Roster_Audit.pdf' : `LogosAI_Coach_Assessment_${sid}.pdf`,
         'pdf'
       );
     } else {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/pdf/${sid}`,
+        getApiUrl(`/api/v1/reports/export/pdf/${sid}`),
         `LogosAI_Assessment_Report.pdf`,
         'pdf'
       );
@@ -190,13 +191,13 @@ function ReportsPageContent() {
     const sid = selectedSessionId || (isCoachOrEducator ? 'all' : 'latest');
     if (isCoachOrEducator) {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/coach/roster/excel?student_id=${sid}`,
+        getApiUrl(`/api/v1/reports/export/coach/roster/excel?student_id=${sid}`),
         sid === 'all' ? 'LogosAI_Student_Roster.csv' : `LogosAI_Student_Metrics_${sid}.csv`,
         'excel'
       );
     } else {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/excel/${sid}`,
+        getApiUrl(`/api/v1/reports/export/excel/${sid}`),
         `LogosAI_Metric_Scorecard.csv`,
         'excel'
       );
@@ -207,13 +208,13 @@ function ReportsPageContent() {
     const sid = selectedSessionId || (isCoachOrEducator ? 'all' : 'me');
     if (isCoachOrEducator) {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`,
+        getApiUrl(`/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`),
         `LogosAI_Coach_Master_Plan.pdf`,
         'coaching'
       );
     } else {
       triggerBlobDownload(
-        `http://localhost:8000/api/v1/reports/export/coaching/pdf/me`,
+        getApiUrl(`/api/v1/reports/export/coaching/pdf/me`),
         `LogosAI_Coaching_Plan.pdf`,
         'coaching'
       );
@@ -222,7 +223,7 @@ function ReportsPageContent() {
 
   const handleDownloadRosterPDF = () => {
     triggerBlobDownload(
-      `http://localhost:8000/api/v1/reports/export/coach/roster/pdf`,
+      getApiUrl(`/api/v1/reports/export/coach/roster/pdf`),
       `LogosAI_Classroom_Roster_Audit.pdf`,
       'roster_pdf'
     );
@@ -230,7 +231,7 @@ function ReportsPageContent() {
 
   const handleDownloadRosterExcel = () => {
     triggerBlobDownload(
-      `http://localhost:8000/api/v1/reports/export/coach/roster/excel`,
+      getApiUrl(`/api/v1/reports/export/coach/roster/excel`),
       `LogosAI_Classroom_Roster.csv`,
       'roster_excel'
     );

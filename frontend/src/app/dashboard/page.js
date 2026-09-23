@@ -6,6 +6,7 @@ import Link from 'next/link';
 import AuthModal from '../../components/AuthModal';
 import SpeakerIcon from '../../components/SpeakerIcon';
 import DebateCoachDashboard from '../../components/DebateCoachDashboard';
+import { getApiUrl } from '../../config/api';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -99,13 +100,13 @@ export default function DashboardPage() {
     const sid = coachReportStudentId || 'all';
 
     if (type === 'pdf') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`);
       defaultFilename = sid === 'all' ? 'LogosAI_Student_Roster_Audit.pdf' : `LogosAI_Coach_Assessment_${sid}.pdf`;
     } else if (type === 'excel') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/roster/excel?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/roster/excel?student_id=${sid}`);
       defaultFilename = sid === 'all' ? 'LogosAI_Student_Roster.csv' : `LogosAI_Student_Metrics_${sid}.csv`;
     } else if (type === 'coaching') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`);
       defaultFilename = 'LogosAI_Coach_Master_Plan.pdf';
     }
 
@@ -260,7 +261,7 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/profile/me", {
+      const res = await fetch(getApiUrl("/api/v1/auth/profile/me"), {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
@@ -286,7 +287,7 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/coaching/plan/me", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/plan/me"), {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
@@ -364,7 +365,7 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/coaching/coach-grade/me", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/coach-grade/me"), {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
@@ -380,7 +381,7 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/sessions/history?session_type=all", {
+      const res = await fetch(getApiUrl("/api/v1/sessions/history?session_type=all"), {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
@@ -398,7 +399,7 @@ export default function DashboardPage() {
     const t = token || getToken();
     if (!t) return;
     try {
-      const res = await fetch("http://localhost:8000/api/v1/presentation-analysis/history", {
+      const res = await fetch(getApiUrl("/api/v1/presentation-analysis/history"), {
         headers: { "Authorization": `Bearer ${t}` }
       });
       if (res.ok) {
@@ -430,10 +431,10 @@ export default function DashboardPage() {
     if (!t) return;
     try {
       const [overviewRes, studentsRes] = await Promise.all([
-        fetch("http://localhost:8000/api/v1/coaching/coach/overview", {
+        fetch(getApiUrl("/api/v1/coaching/coach/overview"), {
           headers: { "Authorization": `Bearer ${t}` }
         }),
-        fetch("http://localhost:8000/api/v1/coaching/coach/students", {
+        fetch(getApiUrl("/api/v1/coaching/coach/students"), {
           headers: { "Authorization": `Bearer ${t}` }
         })
       ]);
@@ -924,7 +925,7 @@ export default function DashboardPage() {
     const token = getToken();
     
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/auth/profile/me?full_name=${encodeURIComponent(fullName)}&experience_level=${encodeURIComponent(experience)}&preferred_topics=${encodeURIComponent(topics)}&presentation_domains=${encodeURIComponent(domains)}&learning_goals=${encodeURIComponent(goals)}&coaching_preferences=${encodeURIComponent(coaching)}`, {
+      const res = await fetch(getApiUrl(`/api/v1/auth/profile/me?full_name=${encodeURIComponent(fullName)}&experience_level=${encodeURIComponent(experience)}&preferred_topics=${encodeURIComponent(topics)}&presentation_domains=${encodeURIComponent(domains)}&learning_goals=${encodeURIComponent(goals)}&coaching_preferences=${encodeURIComponent(coaching)}`), {
         method: "PUT",
         headers: { 
           "Authorization": `Bearer ${token}`,
@@ -963,7 +964,7 @@ export default function DashboardPage() {
         bodyPayload.session_id = parseInt(selectedCoachSessionId);
       }
 
-      const res = await fetch("http://localhost:8000/api/v1/coaching/coach/feedback", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/coach/feedback"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,

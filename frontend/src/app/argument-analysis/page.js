@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import SpeakerIcon from "../../components/SpeakerIcon";
 import MicIcon from "../../components/MicIcon";
+import { getApiUrl } from "../../config/api";
 
 export default function ArgumentAnalysisPage() {
   const [topic, setTopic] = useState("");
@@ -137,7 +138,7 @@ export default function ArgumentAnalysisPage() {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch("http://localhost:8000/api/v1/argument-analysis/deep-evaluate", {
+      const res = await fetch(getApiUrl("/api/v1/argument-analysis/deep-evaluate"), {
         method: "POST",
         headers,
         body: JSON.stringify({

@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import SpeakerIcon from '../../../components/SpeakerIcon';
+import { getApiUrl } from '../../../config/api';
 
 function CoachFeedbackSection({
   p,
@@ -402,7 +403,7 @@ function PerformanceDetailContent() {
     const uid = performanceData?.user_id || (paramUid ? parseInt(paramUid) : 1);
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/coaching/coach/feedback", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/coach/feedback"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -467,7 +468,7 @@ function PerformanceDetailContent() {
     const token = getToken();
 
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/sessions/${sid}/performance`, {
+      const res = await fetch(getApiUrl(`/api/v1/sessions/${sid}/performance`), {
         headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
 
@@ -482,8 +483,8 @@ function PerformanceDetailContent() {
         // Check presentation history first if type is presentation
         if (isPresentation) {
           const presUrl = studentUserId
-            ? `http://localhost:8000/api/v1/presentation-analysis/history?user_id=${studentUserId}`
-            : "http://localhost:8000/api/v1/presentation-analysis/history";
+            ? getApiUrl(`/api/v1/presentation-analysis/history?user_id=${studentUserId}`)
+            : getApiUrl("/api/v1/presentation-analysis/history");
           const presRes = await fetch(presUrl, {
             headers: token ? { "Authorization": `Bearer ${token}` } : {}
           });
@@ -531,8 +532,8 @@ function PerformanceDetailContent() {
 
         // Fallback: try fetching debate history
         const histUrl = studentUserId
-          ? `http://localhost:8000/api/v1/sessions/history?user_id=${studentUserId}`
-          : "http://localhost:8000/api/v1/sessions/history";
+          ? getApiUrl(`/api/v1/sessions/history?user_id=${studentUserId}`)
+          : getApiUrl("/api/v1/sessions/history");
         const histRes = await fetch(histUrl, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
@@ -579,8 +580,8 @@ function PerformanceDetailContent() {
 
         // Second Fallback: Check presentation-analysis history
         const presUrl2 = studentUserId
-          ? `http://localhost:8000/api/v1/presentation-analysis/history?user_id=${studentUserId}`
-          : "http://localhost:8000/api/v1/presentation-analysis/history";
+          ? getApiUrl(`/api/v1/presentation-analysis/history?user_id=${studentUserId}`)
+          : getApiUrl("/api/v1/presentation-analysis/history");
         const presRes = await fetch(presUrl2, {
           headers: token ? { "Authorization": `Bearer ${token}` } : {}
         });
@@ -644,13 +645,13 @@ function PerformanceDetailContent() {
     let defaultFilename = '';
 
     if (type === 'pdf') {
-      url = `http://localhost:8000/api/v1/reports/export/pdf/${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/pdf/${sid}`);
       defaultFilename = `LogosAI_Assessment_Session_${sid}.pdf`;
     } else if (type === 'excel') {
-      url = `http://localhost:8000/api/v1/reports/export/excel/${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/excel/${sid}`);
       defaultFilename = `LogosAI_Metrics_Session_${sid}.csv`;
     } else if (type === 'coaching') {
-      url = `http://localhost:8000/api/v1/reports/export/coaching/pdf/me`;
+      url = getApiUrl(`/api/v1/reports/export/coaching/pdf/me`);
       defaultFilename = `LogosAI_Coaching_Plan_Session_${sid}.pdf`;
     }
 

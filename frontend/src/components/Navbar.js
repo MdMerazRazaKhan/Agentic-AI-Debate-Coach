@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import AuthModal from './AuthModal';
+import { getApiUrl } from '../config/api';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -65,7 +66,7 @@ export default function Navbar() {
 
   const fetchNotifications = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/v1/notifications/my-alerts");
+      const res = await fetch(getApiUrl("/api/v1/notifications/my-alerts"));
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -95,7 +96,7 @@ export default function Navbar() {
 
   const handleMarkAsRead = async (id) => {
     try {
-      await fetch(`http://localhost:8000/api/v1/notifications/read/${id}`, {
+      await fetch(getApiUrl(`/api/v1/notifications/read/${id}`), {
         method: "POST"
       });
     } catch (err) {}

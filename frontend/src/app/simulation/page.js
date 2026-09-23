@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import AuthModal from '../../components/AuthModal';
+import { getApiUrl } from '../../config/api';
 
 const authHeaders = (json = false) => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('logos_ai_jwt') : null;
@@ -152,7 +153,7 @@ export default function SimulationPage() {
         }
       } catch (e) {}
 
-      fetch("http://localhost:8000/api/v1/coaching/profile", {
+      fetch(getApiUrl("/api/v1/coaching/profile"), {
         headers: { "Authorization": `Bearer ${token}` }
       })
       .then(res => res.ok ? res.json() : null)
@@ -184,7 +185,7 @@ export default function SimulationPage() {
     const activeUserName = (userName && !userName.toLowerCase().includes('hardwill')) ? userName : ((typeof window !== 'undefined' && localStorage.getItem('logos_ai_user_name') && !localStorage.getItem('logos_ai_user_name').toLowerCase().includes('hardwill')) ? localStorage.getItem('logos_ai_user_name') : 'Dayan');
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/sessions/create", {
+      const res = await fetch(getApiUrl("/api/v1/sessions/create"), {
         method: "POST",
         headers: authHeaders(true),
         body: JSON.stringify({
@@ -242,7 +243,7 @@ export default function SimulationPage() {
     const finalTopic = topic === "Custom Topic (Enter below)" ? (customTopic || "Custom Debate Topic") : topic;
     try {
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
-      await fetch("http://localhost:8000/api/v1/sessions/create", {
+      await fetch(getApiUrl("/api/v1/sessions/create"), {
         method: "POST",
         headers: authHeaders(true),
         body: JSON.stringify({
@@ -380,7 +381,7 @@ export default function SimulationPage() {
     };
 
     try {
-      const response = await fetch(`http://localhost:8000/api/v1/sessions/${sessionId}/complete`, {
+      const response = await fetch(getApiUrl(`/api/v1/sessions/${sessionId}/complete`), {
         method: "POST",
         headers: authHeaders()
       });
@@ -423,7 +424,7 @@ export default function SimulationPage() {
     setLoading(true);
 
     try {
-      const simRes = await fetch("http://localhost:8000/api/v1/simulation/turn", {
+      const simRes = await fetch(getApiUrl("/api/v1/simulation/turn"), {
         method: "POST",
         headers: authHeaders(true),
         body: JSON.stringify({

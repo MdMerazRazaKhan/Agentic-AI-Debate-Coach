@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '../config/api';
 
 export default function DebateCoachDashboard({ userRole, userName, userEmail, onLogout }) {
   const [activeTab, setActiveTab] = useState('student_progress');
@@ -112,10 +113,10 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     setLoading(true);
     try {
       const [overviewRes, studentsRes] = await Promise.all([
-        fetch("http://localhost:8000/api/v1/coaching/coach/overview", {
+        fetch(getApiUrl("/api/v1/coaching/coach/overview"), {
           headers: { "Authorization": `Bearer ${token}` }
         }),
-        fetch("http://localhost:8000/api/v1/coaching/coach/students", {
+        fetch(getApiUrl("/api/v1/coaching/coach/students"), {
           headers: { "Authorization": `Bearer ${token}` }
         })
       ]);
@@ -148,16 +149,16 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     setLoadingStudentData(true);
     try {
       const [debRes, presRes, gapsRes, recsRes] = await Promise.all([
-        fetch(`http://localhost:8000/api/v1/sessions/history?user_id=${studentId}`, {
+        fetch(getApiUrl(`/api/v1/sessions/history?user_id=${studentId}`), {
           headers: { "Authorization": `Bearer ${token}` }
         }),
-        fetch(`http://localhost:8000/api/v1/presentation-analysis/history?user_id=${studentId}`, {
+        fetch(getApiUrl(`/api/v1/presentation-analysis/history?user_id=${studentId}`), {
           headers: { "Authorization": `Bearer ${token}` }
         }),
-        fetch(`http://localhost:8000/api/v1/coaching/skill-gap-analysis/${studentId}`, {
+        fetch(getApiUrl(`/api/v1/coaching/skill-gap-analysis/${studentId}`), {
           headers: { "Authorization": `Bearer ${token}` }
         }),
-        fetch(`http://localhost:8000/api/v1/coaching/recommendations/${studentId}`, {
+        fetch(getApiUrl(`/api/v1/coaching/recommendations/${studentId}`), {
           headers: { "Authorization": `Bearer ${token}` }
         })
       ]);
@@ -381,7 +382,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     const token = getToken();
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/coaching/coach/feedback", {
+      const res = await fetch(getApiUrl("/api/v1/coaching/coach/feedback"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -471,7 +472,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
 
     try {
       if (editingRecId) {
-        const res = await fetch(`http://localhost:8000/api/v1/coaching/recommendations/${editingRecId}`, {
+        const res = await fetch(getApiUrl(`/api/v1/coaching/recommendations/${editingRecId}`), {
           method: "PUT",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -494,7 +495,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
           setRecMsg({ type: 'error', text: 'Failed to update recommendation.' });
         }
       } else {
-        const res = await fetch("http://localhost:8000/api/v1/coaching/recommendations", {
+        const res = await fetch(getApiUrl("/api/v1/coaching/recommendations"), {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -528,7 +529,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     if (!confirm("Are you sure you want to remove this recommendation?")) return;
     const token = getToken();
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/coaching/recommendations/${recId}`, {
+      const res = await fetch(getApiUrl(`/api/v1/coaching/recommendations/${recId}`), {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -544,7 +545,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     const nextStatus = rec.status === 'Completed' ? 'Active' : rec.status === 'Active' ? 'In Progress' : 'Completed';
     const token = getToken();
     try {
-      const res = await fetch(`http://localhost:8000/api/v1/coaching/recommendations/${rec.id}/status`, {
+      const res = await fetch(getApiUrl(`/api/v1/coaching/recommendations/${rec.id}/status`), {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -570,7 +571,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
         .slice(0, 2);
 
       for (const skill of lowestSkills) {
-        await fetch("http://localhost:8000/api/v1/coaching/recommendations", {
+        await fetch(getApiUrl("/api/v1/coaching/recommendations"), {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
@@ -620,7 +621,7 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     const token = getToken();
 
     try {
-      const res = await fetch("http://localhost:8000/api/v1/auth/change-password", {
+      const res = await fetch(getApiUrl("/api/v1/auth/change-password"), {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -658,13 +659,13 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
     let defaultFilename = '';
 
     if (type === 'pdf') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/roster/pdf?student_id=${sid}`);
       defaultFilename = sid === 'all' ? 'LogosAI_Coach_Roster_Audit.pdf' : `LogosAI_Coach_Student_${sid}_Audit.pdf`;
     } else if (type === 'excel') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/roster/excel?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/roster/excel?student_id=${sid}`);
       defaultFilename = sid === 'all' ? 'LogosAI_Student_Roster.csv' : `LogosAI_Student_${sid}_Metrics.csv`;
     } else if (type === 'coaching') {
-      url = `http://localhost:8000/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`;
+      url = getApiUrl(`/api/v1/reports/export/coach/coaching/pdf?student_id=${sid}`);
       defaultFilename = 'LogosAI_Coach_Master_Plan.pdf';
     }
 

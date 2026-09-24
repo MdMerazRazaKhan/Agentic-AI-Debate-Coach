@@ -525,20 +525,14 @@ export default function DashboardPage() {
   const debateTrendData = useMemo(() => {
     const validDebates = debateTableSessions;
     const sorted = [...validDebates].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'deb-b1', topic: 'Universal Basic Income Economic Feasibility', format: 'Parliamentary Debate', overall_score: 74, date: '2026-09-01 10:30' },
-      { id: 'deb-b2', topic: 'Artificial General Intelligence Safety Standards', format: 'Lincoln-Douglas', overall_score: 79, date: '2026-09-05 14:00' },
-      { id: 'deb-b3', topic: 'Autonomous Defense Grids & Human Oversight', format: 'Cross-Examination', overall_score: 84, date: '2026-09-10 16:30' },
-      { id: 'deb-b4', topic: 'Stratospheric Aerosol Injection Protocols', format: 'Parliamentary Debate', overall_score: 88, date: '2026-09-15 12:15' },
-      { id: 'deb-b5', topic: 'Decentralized Digital Identity & State Sovereignty', format: 'Championship Round', overall_score: 92, date: '2026-09-17 18:45' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((d, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(d.overall_score ?? d.score ?? 85);
+      const scoreVal = parseFloat(d.overall_score ?? d.score ?? 0);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? items[index - 1].score ?? 85) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? items[index - 1].score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
@@ -552,31 +546,25 @@ export default function DashboardPage() {
         category: 'Debate'
       };
     });
-  }, [debateHistory]);
+  }, [debateTableSessions]);
 
   // 2. Presentation Improvement Trend Data
   const presentationTrendData = useMemo(() => {
     const sorted = [...presentationHistory].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'pres-b1', topic: 'Keynote Introduction: Frontier Intelligence', wpm: 172, filler_words_count: 7, clarity_score: 72, confidence_score: 68, overall_score: 70, date: '2026-09-02 09:30' },
-      { id: 'pres-b2', topic: 'Vocal Modulation: Cadence & Pacing Audit', wpm: 164, filler_words_count: 5, clarity_score: 78, confidence_score: 74, overall_score: 76, date: '2026-09-06 13:00' },
-      { id: 'pres-b3', topic: 'Persuasive Rhetoric & Pause Placement', wpm: 152, filler_words_count: 3, clarity_score: 84, confidence_score: 82, overall_score: 83, date: '2026-09-11 15:30' },
-      { id: 'pres-b4', topic: 'Executive Briefing: Technical Synthesis', wpm: 146, filler_words_count: 2, clarity_score: 89, confidence_score: 88, overall_score: 89, date: '2026-09-14 11:15' },
-      { id: 'pres-b5', topic: 'Keynote Address: Socratic Articulation', wpm: 140, filler_words_count: 1, clarity_score: 94, confidence_score: 92, overall_score: 93, date: '2026-09-17 16:45' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((p, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(p.overall_score ?? Math.round((p.confidence_score || 80) * 0.5 + (p.clarity_score || 80) * 0.5));
+      const scoreVal = parseFloat(p.overall_score ?? Math.round((p.confidence_score || 0) * 0.5 + (p.clarity_score || 0) * 0.5));
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? 80) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
         id: p.id,
         topic: p.topic || p.title,
-        format: `${p.wpm || 142} WPM • ${p.filler_words_count || 2} fillers`,
+        format: `${p.wpm || 0} WPM • ${p.filler_words_count || 0} fillers`,
         score: scoreVal,
         meanPercentage: meanPercentage,
         delta: delta,
@@ -599,20 +587,14 @@ export default function DashboardPage() {
              !fmt.includes('fallacy') && !fmt.includes('counter') && !tit.includes('fallacy') && !tit.includes('counter');
     });
     const sorted = [...argSessions].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'arg-b1', topic: 'Claim Warranting: Empirical Evidence Linkage', score: 71, format: 'Toulmin Structure Audit', date: '2026-09-03 10:15' },
-      { id: 'arg-b2', topic: 'Premise Coherence & Syllogistic Deduction', score: 77, format: 'Deductive Logic Analysis', date: '2026-09-07 15:40' },
-      { id: 'arg-b3', topic: 'Refutation Resilience & Fallacy Shielding', score: 82, format: 'Fallacy Defense Audit', date: '2026-09-12 12:20' },
-      { id: 'arg-b4', topic: 'Statistical Data Substantiation & Credibility', score: 87, format: 'Empirical Warrant Verification', date: '2026-09-15 17:05' },
-      { id: 'arg-b5', topic: 'Dialectic Synthesis & Counter-Premise Defense', score: 91, format: 'Advanced Rhetoric Audit', date: '2026-09-17 19:10' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((a, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(a.argument_quality ?? a.logical_consistency ?? a.score ?? 82);
+      const scoreVal = parseFloat(a.argument_quality ?? a.logical_consistency ?? a.score ?? 0);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].argument_quality ?? items[index - 1].score ?? 82) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].argument_quality ?? items[index - 1].score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
@@ -638,20 +620,14 @@ export default function DashboardPage() {
       return st === 'fallacy detection' || fmt.includes('fallacy') || tit.includes('fallacy') || top.includes('fallacy');
     });
     const sorted = [...fallacySessions].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'fal-b1', topic: 'Ad Hominem Defense in Electoral Debates', score: 72, format: 'Ad Hominem Detection Audit', date: '2026-09-02 11:30' },
-      { id: 'fal-b2', topic: 'Straw Man Refutation in Environmental Policy', score: 79, format: 'Straw Man Fallacy Audit', date: '2026-09-06 14:15' },
-      { id: 'fal-b3', topic: 'False Dilemma & Slippery Slope Neutralization', score: 84, format: 'Dilemma & Slope Shielding', date: '2026-09-11 16:45' },
-      { id: 'fal-b4', topic: 'Appeal to Authority & Circular Reasoning Audit', score: 88, format: 'Epistemic Warrant Verification', date: '2026-09-15 10:20' },
-      { id: 'fal-b5', topic: 'Red Herring & Hasty Generalization Elimination', score: 94, format: 'Master Fallacy Insulation', date: '2026-09-17 18:30' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((f, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(f.logical_consistency ?? f.score ?? f.overall_score ?? 82);
+      const scoreVal = parseFloat(f.logical_consistency ?? f.score ?? f.overall_score ?? 0);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].logical_consistency ?? items[index - 1].score ?? items[index - 1].overall_score ?? 82) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].logical_consistency ?? items[index - 1].score ?? items[index - 1].overall_score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
@@ -677,20 +653,14 @@ export default function DashboardPage() {
              !fmt.includes('fallacy') && !tit.includes('fallacy');
     });
     const sorted = [...counterSessions].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'cnt-b1', topic: 'Countering Technology Monopoly Defense Claims', score: 73, format: 'Logical Rebuttal Drill', date: '2026-09-04 11:00' },
-      { id: 'cnt-b2', topic: 'Refuting Economic Protectionism Arguments', score: 78, format: 'Evidence Counterargument', date: '2026-09-09 14:30' },
-      { id: 'cnt-b3', topic: 'Challenging Bioethics Moratorium Assertions', score: 84, format: 'Ethical Counterargument', date: '2026-09-12 16:15' },
-      { id: 'cnt-b4', topic: 'Dismantling Surveillance Overreach Claims', score: 89, format: 'Practical Counterpoint Drill', date: '2026-09-15 11:45' },
-      { id: 'cnt-b5', topic: 'Socratic Cross-Examination on Free Expression', score: 94, format: 'Strategic Rebuttal Mastery', date: '2026-09-17 17:50' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((c, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(c.rebuttal_effectiveness ?? c.score ?? 84);
+      const scoreVal = parseFloat(c.rebuttal_effectiveness ?? c.score ?? 0);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].rebuttal_effectiveness ?? items[index - 1].score ?? 84) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].rebuttal_effectiveness ?? items[index - 1].score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
@@ -1370,11 +1340,13 @@ export default function DashboardPage() {
               <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
                 OVERALL MEAN PERCENTAGE
               </div>
-              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: activeCategoryConfig.color }}>
-                {currentMeanPercentage}%
+              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: currentEvaluatedCount > 0 ? activeCategoryConfig.color : '#9CA3AF' }}>
+                {currentEvaluatedCount > 0 ? `${currentMeanPercentage}%` : '0%'}
               </div>
               <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0.3rem 0 0' }}>
-                Mean benchmark across {currentEvaluatedCount} {activeCategoryConfig.axisGuideName.toLowerCase()}
+                {currentEvaluatedCount > 0 
+                  ? `Mean benchmark across ${currentEvaluatedCount} ${activeCategoryConfig.axisGuideName.toLowerCase()}`
+                  : `No completed ${activeCategoryConfig.name.toLowerCase()} sessions`}
               </p>
             </div>
 
@@ -1382,11 +1354,11 @@ export default function DashboardPage() {
               <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
                 HIGHEST {activeCategoryConfig.roundPrefix} SCORE
               </div>
-              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: '#10B981' }}>
-                {currentHighestScore}%
+              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: currentEvaluatedCount > 0 ? '#10B981' : '#9CA3AF' }}>
+                {currentEvaluatedCount > 0 ? `${currentHighestScore}%` : '0%'}
               </div>
               <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0.3rem 0 0' }}>
-                Personal best in {activeCategoryConfig.name}
+                {currentEvaluatedCount > 0 ? `Personal best in ${activeCategoryConfig.name}` : 'Unassessed (Complete a round)'}
               </p>
             </div>
 
@@ -1394,11 +1366,11 @@ export default function DashboardPage() {
               <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
                 GROWTH PROGRESSION
               </div>
-              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: currentNetGrowth >= 0 ? '#059669' : '#DC2626' }}>
-                {currentNetGrowth >= 0 ? `+${currentNetGrowth}%` : `${currentNetGrowth}%`}
+              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: currentEvaluatedCount > 1 ? (currentNetGrowth >= 0 ? '#059669' : '#DC2626') : '#9CA3AF' }}>
+                {currentEvaluatedCount > 1 ? (currentNetGrowth >= 0 ? `+${currentNetGrowth}%` : `${currentNetGrowth}%`) : '0%'}
               </div>
               <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0.3rem 0 0' }}>
-                Progression from {activeCategoryConfig.roundPrefix} 1 to Latest
+                {currentEvaluatedCount > 1 ? `Progression from ${activeCategoryConfig.roundPrefix} 1 to Latest` : 'Pending completed practice rounds'}
               </p>
             </div>
 
@@ -1406,7 +1378,7 @@ export default function DashboardPage() {
               <div className="font-mono text-muted" style={{ fontSize: '0.72rem', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
                 EVALUATED {activeCategoryConfig.roundPrefix}S
               </div>
-              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: '#111827' }}>
+              <div className="font-display" style={{ fontSize: '2.4rem', fontWeight: 900, color: currentEvaluatedCount > 0 ? '#111827' : '#9CA3AF' }}>
                 {currentEvaluatedCount}
               </div>
               <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0.3rem 0 0' }}>
@@ -1559,12 +1531,16 @@ export default function DashboardPage() {
                         {activeCategoryConfig.roundPrefix} DETAILS
                       </span>
                       <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 500 }}>
-                        Hover or click any node on the graph to inspect performance, cumulative mean %, and growth delta.
+                        {currentEvaluatedCount > 0
+                          ? "Hover or click any node on the graph to inspect performance, cumulative mean %, and growth delta."
+                          : `No completed ${activeCategoryConfig.name.toLowerCase()} sessions recorded yet. Complete activities to unlock detailed round-by-round insights.`}
                       </span>
                     </div>
-                    <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>
-                      Click point to lock details
-                    </span>
+                    {currentEvaluatedCount > 0 && (
+                      <span style={{ fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600 }}>
+                        Click point to lock details
+                      </span>
+                    )}
                   </div>
                 );
               }
@@ -1699,8 +1675,43 @@ export default function DashboardPage() {
 
             {/* Chart Viewport with Pinned Y-Axis & Horizontally Scrollable Plot */}
             {currentEvaluatedCount === 0 ? (
-              <div style={{ padding: '3.5rem 1rem', textAlign: 'center', color: '#9CA3AF' }}>
-                No completed {activeCategoryConfig.name.toLowerCase()} sessions recorded yet. Practice in this module to generate your progression graph!
+              <div style={{ 
+                padding: '4rem 2rem', 
+                textAlign: 'center', 
+                background: '#FAFAFA', 
+                borderRadius: '10px', 
+                border: '1px dashed #D1D5DB' 
+              }}>
+                <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📊</div>
+                <h4 className="font-display" style={{ fontSize: '1.2rem', fontWeight: 800, textTransform: 'uppercase', color: '#111827', margin: '0 0 0.5rem' }}>
+                  No {activeCategoryConfig.name} Sessions Recorded Yet
+                </h4>
+                <p style={{ fontSize: '0.85rem', color: '#6B7280', maxWidth: '480px', margin: '0 auto 1.5rem', lineHeight: '1.5' }}>
+                  Your performance, round-by-round score progression, and cumulative mean trajectory will automatically be charted here once you complete your first practice session.
+                </p>
+                <Link
+                  href={
+                    trendCategory === 'presentation' ? '/presentation-analysis' :
+                    trendCategory === 'argument' ? '/argument-analysis' :
+                    trendCategory === 'fallacy' ? '/fallacy-detector' :
+                    trendCategory === 'counter' ? '/counter-argument' : '/simulation'
+                  }
+                  className="btn btn-red"
+                  style={{
+                    padding: '0.65rem 1.4rem',
+                    borderRadius: '8px',
+                    fontSize: '0.825rem',
+                    fontWeight: 800,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: activeCategoryConfig.color,
+                    color: '#FFFFFF'
+                  }}
+                >
+                  Start First {activeCategoryConfig.name} →
+                </Link>
               </div>
             ) : (
               <div className="trend-card-box" style={{ border: '1px solid #E5E7EB', borderRadius: '10px', background: '#FAFAFA', overflow: 'hidden' }}>

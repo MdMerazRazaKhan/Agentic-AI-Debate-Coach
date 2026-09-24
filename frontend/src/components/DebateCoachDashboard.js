@@ -235,20 +235,14 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
   // 1. Student Debate Improvement Trend Data
   const studentDebateTrendData = useMemo(() => {
     const sorted = [...studentDebates].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'deb-s1', topic: 'Universal Basic Income Feasibility', format: 'Parliamentary Debate', overall_score: 74, created_at: '2026-09-01' },
-      { id: 'deb-s2', topic: 'Artificial General Intelligence Alignment', format: 'Lincoln-Douglas', overall_score: 79, created_at: '2026-09-05' },
-      { id: 'deb-s3', topic: 'Autonomous Defense Systems Governance', format: 'Cross-Examination', overall_score: 84, created_at: '2026-09-10' },
-      { id: 'deb-s4', topic: 'Climate Intervention Sovereign Directives', format: 'Parliamentary Debate', overall_score: 88, created_at: '2026-09-15' },
-      { id: 'deb-s5', topic: 'Decentralized Digital Identity & Sovereignty', format: 'Championship Round', overall_score: 92, created_at: '2026-09-17' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((d, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(d.overall_score ?? d.score ?? 85);
+      const scoreVal = parseFloat(d.overall_score ?? d.score ?? 0);
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? items[index - 1].score ?? 85) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? items[index - 1].score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
@@ -269,20 +263,14 @@ export default function DebateCoachDashboard({ userRole, userName, userEmail, on
   // 2. Student Presentation Improvement Trend Data
   const studentPresentationTrendData = useMemo(() => {
     const sorted = [...studentPresentations].sort((a, b) => getTime(a) - getTime(b));
-    const items = sorted.length > 0 ? sorted : [
-      { id: 'pres-s1', topic: 'Keynote Introduction: Frontier Intelligence', wpm: 172, filler_words_count: 7, clarity_score: 72, confidence_score: 68, overall_score: 70, date: '2026-09-02' },
-      { id: 'pres-s2', topic: 'Vocal Modulation: Cadence & Pacing Audit', wpm: 164, filler_words_count: 5, clarity_score: 78, confidence_score: 74, overall_score: 76, date: '2026-09-06' },
-      { id: 'pres-s3', topic: 'Persuasive Rhetoric & Pause Placement', wpm: 152, filler_words_count: 3, clarity_score: 84, confidence_score: 82, overall_score: 83, date: '2026-09-11' },
-      { id: 'pres-s4', topic: 'Executive Briefing: Technical Synthesis', wpm: 146, filler_words_count: 2, clarity_score: 89, confidence_score: 88, overall_score: 89, date: '2026-09-14' },
-      { id: 'pres-s5', topic: 'Keynote Address: Socratic Articulation', wpm: 140, filler_words_count: 1, clarity_score: 94, confidence_score: 92, overall_score: 93, date: '2026-09-17' },
-    ];
+    const items = sorted;
     let runSum = 0;
     return items.map((p, index) => {
       const roundNumber = index + 1;
-      const scoreVal = parseFloat(p.overall_score ?? Math.round((p.confidence_score || 80) * 0.5 + (p.clarity_score || 80) * 0.5));
+      const scoreVal = parseFloat(p.overall_score ?? Math.round((p.confidence_score || 0) * 0.5 + (p.clarity_score || 0) * 0.5));
       runSum += scoreVal;
       const meanPercentage = Math.round((runSum / roundNumber) * 10) / 10;
-      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? 80) : scoreVal;
+      const prevScore = index > 0 ? parseFloat(items[index - 1].overall_score ?? 0) : scoreVal;
       const delta = Math.round((scoreVal - prevScore) * 10) / 10;
       return {
         round: roundNumber,
